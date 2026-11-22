@@ -11,7 +11,7 @@
 </script>
 <script type="module">
 // Gesichts-Nahaufnahme zum Prüfen von Mimik, Mund und Zähnen.
-// gesicht.html?who=mia&expr=laugh&ek=1&jaw=0.5&yaw=20&pitch=10&dist=0.55&fov=22
+// gesicht.html?who=mia&expr=laugh&ek=1&jaw=0.5&yaw=20&pitch=10&dist=0.55&fov=22&toff=0.035
 //   who   Figur aus kit_cast (du, mia, leon, ...)      expr/ek  Ausdruck + Stärke      jaw  Mundöffnung überschreiben
 //   yaw   Kamera um den Kopf (Grad, + = von rechts)     pitch    Kamera höher (+) / tiefer (-)      dist/fov  Abstand, Bildwinkel
 // Rendern: node still.js "gesicht.html?expr=laugh" out.png 1 1080 1080
@@ -38,7 +38,7 @@ lookAt(h, new THREE.Vector3(head0.x, head0.y + 0.07, head0.z + 2), 1);
 const face = h.userData.face; face.expr(Q.get('expr') || 'neutral', qn('ek', 1), Q.has('jaw') ? { jawOpen: qn('jaw', 0) } : {});
 h.updateMatrixWorld(true);
 const hp = b.Head.getWorldPosition(new THREE.Vector3());
-const fc = hp.clone().add(new THREE.Vector3(0, qn('ty', 0.035), 0.06)); // Gesichtsmitte (zwischen Nase und Mund)
+const fc = hp.clone().add(new THREE.Vector3(0, qn('toff', 0.035), 0.06)); // Gesichtsmitte (zwischen Nase und Mund)
 const yaw = qn('yaw', 0) * Math.PI / 180, pitch = qn('pitch', 4) * Math.PI / 180, dist = qn('dist', 0.6);
 const camPos = fc.clone().add(new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(dist));
 spot(0xffd8b0, qn('keyI', 22), [-1.1, 2.4, 1.8], [hp.x, hp.y, hp.z], 0.45, 0.9, true);

@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Prüfstand: eine Figur in einer Standard-Pose als Halbtotale – zum Prüfen auf Durchdringungen, Löcher, Griffe.
+// pruefstand.html?who=mia&pose=handy&yaw=25
+//   pose: stehen | handy | reden | arme | sitzen        yaw: Kamera um die Figur (Grad)      near: 1 = Nahaufnahme der Hände
+// Rendern: node still.js "pruefstand.html?who=mia&pose=handy" out.png 1 600 800
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { cnv, tex, makeRng, rbox, std } from './kit_world.js';
+import { loadHumanAssets, spawn, posePhone, sitOn, lookAt } from './kit_cast.js';
+
+const stage = createStage({ preset: 'studio', shadowExtent: 3, W: innerWidth, H: innerHeight });
+const { scene, Q, qn } = stage; stage.keyLight.intensity *= 0.35; if (stage.rimLight) stage.rimLight.intensity *= 0.4; stage.hemi.intensity *= 0.7;
+{ const S = 1024, c = cnv(S, S), g = c.getContext('2d'); const r = makeRng(5);
+  const bg = g.createRadialGradient(S * 0.55, S * 0.4, 40, S * 0.5, S * 0.5, S * 0.8); bg.addColorStop(0, '#24214a'); bg.addColorStop(0.6, '#101128'); bg.addColorStop(1, '#06060e'); g.fillStyle = bg; g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 24; i++) { const x = S * r(), y = S * r(), rad = 20 + r() * 70, a = 0.08 + r() * 0.2; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(255,170,220,${a})`); gr.addColorStop(1, 'rgba(255,170,220,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, rad, 0, 6.28); g.fill(); }
+  const bd = new THREE.Mesh(new THREE.PlaneGeometry(7, 7), new THREE.MeshBasicMaterial({ map: tex(c), toneMapped: false, fog: false })); bd.position.set(0, 1.4, -3); scene.add(bd); }
+const floor = new THREE.Mesh(new THREE.CircleGeometry(3, 48), std({ color: 0x2a2838, roughness: 0.9 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const spot = (col, I, p, tgt, ang = 0.5, pen = 0.8, shadow = false) => { const s = new THREE.SpotLight(col, I, 9, ang, pen, 1.5); s.position.set(...p); s.target.position.set(...tgt); s.castShadow = shadow; if (shadow) { s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -0.0002; } scene.add(s, s.target); return s; };
+
+await loadHumanAssets();
+const pose = Q.get('pose') || 'stehen';
+const anim = { stehen: 'Idle_Loop', handy: 'Idle_Loop', reden: 'Idle_Talking_Loop', arme: 'Idle_FoldArms_Loop', sitzen: 'Sitting_Idle_Loop' }[pose] || 'Idle_Loop';
+const h = spawn(Q.get('who') || 'du', { anim, time: qn('t', 0.8), x: 0, y: 0, z: 0, ry: qn('ry', 0) }); scene.add(h); h.updateMatrixWorld(true);
+const b = h.userData.bones;
+if (pose === 'sitzen') { const stool = new THREE.Mesh(rbox(0.42, 0.45, 0.4, 0.03), std({ color: 0x6a5a8a, roughness: 0.7 })); stool.position.set(0, 0.225, -0.08); stool.castShadow = stool.receiveShadow = true; scene.add(stool); sitOn(h, new THREE.Vector3(0, 0.46, -0.06)); }
+const hp0 = b.Head.getWorldPosition(new THREE.Vector3());
+const yaw = qn('yaw', 25) * Math.PI / 180;
+if (pose === 'handy') posePhone(h, {});
+else if (pose !== 'arme') lookAt(h, new THREE.Vector3(Math.sin(yaw) * 2, hp0.y + 0.05, Math.cos(yaw) * 2), 0.6);
+if (pose === 'reden') h.userData.face.expr('happy', 0.6, { jawOpen: 0.25 });
+h.updateMatrixWorld(true);
+const hp = b.Head.getWorldPosition(new THREE.Vector3());
+const near = Q.has('near');
+const tgt = near ? b.hand_r.getWorldPosition(new THREE.Vector3()).lerp(b.hand_l.getWorldPosition(new THREE.Vector3()), pose === 'handy' ? 0.15 : 0.5).add(new THREE.Vector3(0, 0.03, 0)) : new THREE.Vector3(hp.x, hp.y - (pose === 'sitzen' ? 0.3 : 0.32), hp.z);
+const dist = near ? 0.55 : (pose === 'sitzen' ? 2.1 : 1.85);
+const cam = tgt.clone().add(new THREE.Vector3(Math.sin(yaw) * dist, near ? 0.12 : 0.1, Math.cos(yaw) * dist));
+spot(0xffe0c0, 26, [-1.4, 2.8, 2.0], [hp.x, hp.y - 0.4, hp.z], 0.55, 0.8, true);
+spot(0xff6ad8, 30, [1.4, 2.4, -1.6], [hp.x, hp.y - 0.3, hp.z], 0.6, 0.7);
+spot(0x8a8aff, 14, [-1.6, 1.8, -1.4], [hp.x, hp.y - 0.4, hp.z], 0.6, 0.7);
+spot(0xb0c0ff, 8, [1.6, 1.4, 2.0], [hp.x, hp.y - 0.5, hp.z], 0.7, 0.9);
+stage.limitLights(hp, 8);
+stage.view({ pos: cam.toArray(), target: tgt.toArray(), fov: qn('fov', near ? 30 : 36) }).build({ focus: tgt, aperture: 0.0003, maxblur: 0.004 }).ready();
+</script>
+</body>
+</html>
