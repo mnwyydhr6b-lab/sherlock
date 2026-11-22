@@ -77,7 +77,7 @@ export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = loca
     // Kamera setzen; URL-Parameter cx..tz/fov haben Vorrang (zum schnellen Ausprobieren)
     view({ pos, target, fov } = {}) { camera.fov = qn('fov', fov ?? camera.fov); camera.position.set(qn('cx', pos[0]), qn('cy', pos[1]), qn('cz', pos[2])); camera.lookAt(qn('tx', target[0]), qn('ty', target[1]), qn('tz', target[2])); camera.updateProjectionMatrix(); return stage; },
     // Schatten-Bereich des Hauptlichts auf den Ausschnitt legen
-    aimKey(center) { if (keyLight) { keyLight.target.position.copy(center); keyLight.position.copy(center).add(new THREE.Vector3(P.key[2], P.key[3], P.key[4])); } return stage; },
+    aimKey(center, offset = null) { if (keyLight) { keyLight.target.position.copy(center); keyLight.position.copy(center).add(offset ? new THREE.Vector3(...offset) : new THREE.Vector3(P.key[2], P.key[3], P.key[4])); } return stage; },
     build({ focus = null, aperture = 0.0009, maxblur = 0.0045 } = {}) {
       composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
       const gtao = new GTAOPass(scene, camera, W, H); gtao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.4, thickness: 1.2, scale: 1, samples: 16 }); gtao.blendIntensity = qn('ao', P.ao ?? 0.85); composer.addPass(gtao);

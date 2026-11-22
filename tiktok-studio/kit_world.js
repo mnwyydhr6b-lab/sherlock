@@ -89,6 +89,18 @@ const GEN = {
     // weathering
     const id = g.getImageData(0, 0, S, S); for (let i = 0; i < S * S; i++) { const k = 0.85 + nf[i] * 0.3; id.data[i * 4] *= k; id.data[i * 4 + 1] *= k; id.data[i * 4 + 2] *= k; } g.putImageData(id, 0, 0);
     return { map: tex(m), bump: tex(b, false) }; },
+  // laminate floor, light oak (2.4 m per tile): planks 0.2 m x 1.2 m, staggered
+  laminat() { const S = 1024, r = makeRng(17), n = fbm(S, S, 4, 4), g2 = fbm(S, S, 2, 3); const pw = S / 12, pl = S / 2; const tone = []; for (let i = 0; i < 64; i++) tone.push(0.88 + r() * 0.2);
+    const m = cnv(S, S), b = cnv(S, S);
+    const f = (x, y) => { const row = (y / pw) | 0; const off = (row * 0.37 % 1) * pl; const xo = (x + off) % S; const jx = xo % pl, jy = y % pw; return [Math.min(jx, pl - 1 - jx, jy, pw - 1 - jy), row * 2 + ((xo / pl) | 0)]; };
+    putRGB(m, i => { const x = i % S, y = (i / S) | 0; const [j, id] = f(x, y); const k = tone[id % 64]; const grain = Math.sin(y * 0.9 + n[i] * 22 + id * 3) * 0.045 + (g2[i] - 0.5) * 0.12; let v = k + grain; if (j < 1.2) v *= 0.55; return [0.78 * v, 0.6 * v, 0.42 * v]; });
+    putGray(b, i => { const x = i % S, y = (i / S) | 0; const [j] = f(x, y); return j < 1.2 ? 0 : 0.7 + (n[i] - 0.5) * 0.2; });
+    return { map: tex(m), bump: tex(b, false) }; },
+  // painted interior wall (1 m per tile): very fine roller texture
+  paint() { const S = 256, n = fbm(S, S, 16, 3), nf = fbm(S, S, 64, 1); const m = cnv(S, S), b = cnv(S, S);
+    putGray(m, i => 0.96 + (n[i] - 0.5) * 0.04); putGray(b, i => 0.5 + (nf[i] - 0.5) * 0.9 + (n[i] - 0.5) * 0.2); return { map: tex(m), bump: tex(b, false) }; },
+  // knitted / woven fabric (0.5 m per tile) for duvets, rugs, curtains
+  fabric() { const S = 256, n = fbm(S, S, 8, 3); const m = cnv(S, S); putGray(m, i => { const x = i % S, y = (i / S) | 0; return 0.86 + Math.sin(x * 1.6) * Math.sin(y * 1.6) * 0.05 + (n[i] - 0.5) * 0.1; }); return { map: tex(m) }; },
   // horizontal roller-shutter slats (1 m per tile)
   shutter() { const S = 256; const m = cnv(S, S), g = m.getContext('2d'); for (let y = 0; y < S; y += 10) { const gr = g.createLinearGradient(0, y, 0, y + 10); gr.addColorStop(0, '#9a9a9a'); gr.addColorStop(0.5, '#e8e8e8'); gr.addColorStop(0.9, '#bdbdbd'); gr.addColorStop(1, '#5a5a5a'); g.fillStyle = gr; g.fillRect(0, y, S, 10); } return { map: tex(m) }; },
   // sectional garage door (1 m per tile vertically)

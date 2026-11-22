@@ -58,3 +58,7 @@ export function lookAt(h, p, k = 0.7) { const b = h.userData.bones; h.updateMatr
   const d = p.clone().sub(hp); const yaw = Math.atan2(d.x, d.z) - Math.atan2(f.x, f.z); const yw = Math.atan2(Math.sin(yaw), Math.cos(yaw)); const pitch = -Math.atan2(d.y, Math.hypot(d.x, d.z));
   rotBoneWorld(h, b.neck_01, new THREE.Vector3(0, 1, 0), yw * k * 0.4); rotBoneWorld(h, b.Head, new THREE.Vector3(0, 1, 0), yw * k * 0.6);
   const left = new THREE.Vector3(Math.cos(h.rotation.y + yw * k), 0, -Math.sin(h.rotation.y + yw * k)); rotBoneWorld(h, b.Head, left, pitch * k); }
+
+// Sitzen: Becken der Figur (mit Sitz-Animation, z. B. Sitting_Idle_Loop) genau auf einen Sitzpunkt (Weltkoordinaten) setzen
+export function sitOn(h, seat, { lift = 0.02 } = {}) { h.updateMatrixWorld(true); const pel = h.userData.bones.pelvis.getWorldPosition(new THREE.Vector3());
+  h.position.x += seat.x - pel.x; h.position.z += seat.z - pel.z; h.position.y += seat.y + lift - pel.y; h.updateMatrixWorld(true); }
