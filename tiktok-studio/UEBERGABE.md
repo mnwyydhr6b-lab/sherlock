@@ -162,11 +162,12 @@
 - [x] Länge der Folgen: 50 s bis 10k, danach 61–70 s
 - [x] Account: bestehender Account wird weitergenutzt
 - [ ] Kanal-Auftritt: Anzeigename, Bio, Profilbild im Spielwelt-Look; alte, unpassende Videos auf „Nur ich“ stellen (Nutzer entscheidet)
-- [ ] Folgenliste: 30 Regeln, nach Viral-Potenzial sortiert
+- [~] Folgenliste: 30 Regeln, nach Viral-Potenzial sortiert → `folgenliste.md` (Entwurf 1, Feedback vom Nutzer offen)
 - [ ] Skripte für die ersten 7–10 Folgen (Hook, Ablauf, Sätze, Zähler-Stufen, Endfrage)
 - [ ] Serien-Bibel: Hauptfigur, wiederkehrende Figuren, Orte, Stimmen, Musik, Ende-Karte
 - [ ] Posting-Plan: Uhrzeiten, Captions, Hashtags, Titelbilder, KI-Kennzeichnung
 - [ ] Animations-System für die Spielwelt (Zeitleiste, Kamerafahrten, Laufen, Ton) und Testclip
+- [ ] Sets bauen: Jugendzimmer (mit Handy-Chat-Overlay) und Schulhof/Bushaltestelle (Straße/Partyhaus ist fertig)
 - [ ] Optional: Vorrat an fertigen Videos für die erste Woche
 
 ## 7. Nächste Schritte
