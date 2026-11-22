@@ -34,11 +34,13 @@ const spot = (col, I, p, tgt, ang = 0.5, pen = 0.8, shadow = false) => { const s
 
 async function main() {
   await loadHumanAssets();
-  const du = spawn('du', { anim: v === 'arms' ? 'Idle_FoldArms_Loop' : 'Idle_Loop', time: qn('t', 1.0), x: 0, y: 0, z: 0, ry: qn('ry', v === 'psst' ? 0.18 : v === 'arms' ? 0.28 : -0.35) }); scene.add(du);
+  const du = spawn(Q.get('who') || 'du', { anim: v === 'arms' ? 'Idle_FoldArms_Loop' : 'Idle_Loop', time: qn('t', 1.0), x: 0, y: 0, z: 0, ry: qn('ry', v === 'psst' ? 0.18 : v === 'arms' ? 0.28 : -0.35) }); scene.add(du);
   const b = du.userData.bones; du.updateMatrixWorld(true);
   const head = () => b.Head.getWorldPosition(new THREE.Vector3());
   const camPos = new THREE.Vector3(qn('cx', 0.12), qn('cy', 1.62), qn('cz', 1.35));
   if (Q.has('nocords')) du.traverse(o => { if (o.isMesh && o.geometry && (o.geometry.type === 'TubeGeometry' || (o.geometry.type === 'CylinderGeometry' && o.geometry.parameters.radiusTop < 0.007))) o.visible = false; });
+  if (v === 'face') { lookAt(du, camPos, 0.9); }
+  if (Q.get('expr')) du.userData.face.expr(Q.get('expr'), qn('ek', 1));
   if (v === 'arms') { lookAt(du, camPos, qn('look', 0.85)); rotBoneWorld(du, b.Head, new THREE.Vector3(Math.sin(du.rotation.y), 0, Math.cos(du.rotation.y)), qn('tilt', 0.08)); }
   else if (v === 'psst') {
     const ry = du.rotation.y, f = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)), rt = new THREE.Vector3(-Math.cos(ry), 0, Math.sin(ry)), up = new THREE.Vector3(0, 1, 0);

@@ -53,11 +53,14 @@ export function posePhone(h, { hand = 'r', forward = 0.27, side = 0.0, height = 
 export function holdCup(h, hand = 'r', color = 0xd8262c) { h.updateMatrixWorld(true); const hb = h.userData.bones['hand_' + hand]; const c = makeCup(color); c.position.copy(hb.getWorldPosition(new THREE.Vector3())).add(new THREE.Vector3(0, 0.02, 0)); h.parent.add(c); c.updateMatrixWorld(true); c.applyMatrix4(new THREE.Matrix4().copy(hb.matrixWorld).invert()); hb.add(c); return c; }
 // Figur zu einem Punkt drehen (nur um die Hochachse)
 export function faceTo(h, p) { h.rotation.y = Math.atan2(p.x - h.position.x, p.z - h.position.z); h.updateMatrixWorld(true); }
-// Kopf leicht zu einem Punkt drehen (max. ca. 60°)
-export function lookAt(h, p, k = 0.7) { const b = h.userData.bones; h.updateMatrixWorld(true); const hp = b.Head.getWorldPosition(new THREE.Vector3()); const { f } = axes(h);
-  const d = p.clone().sub(hp); const yaw = Math.atan2(d.x, d.z) - Math.atan2(f.x, f.z); const yw = Math.atan2(Math.sin(yaw), Math.cos(yaw)); const pitch = -Math.atan2(d.y, Math.hypot(d.x, d.z));
-  rotBoneWorld(h, b.neck_01, new THREE.Vector3(0, 1, 0), yw * k * 0.4); rotBoneWorld(h, b.Head, new THREE.Vector3(0, 1, 0), yw * k * 0.6);
-  const left = new THREE.Vector3(Math.cos(h.rotation.y + yw * k), 0, -Math.sin(h.rotation.y + yw * k)); rotBoneWorld(h, b.Head, left, pitch * k); }
+// Kopf (und etwas Hals) genau zu einem Punkt drehen; k = Anteil (1 = ganz hinschauen)
+function headForwardLocal(h) { const body = h.userData.body, b = h.userData.bones; if (h.userData._hf) return h.userData._hf; const i = body.skeleton.bones.indexOf(b.Head);
+  const bq = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().copy(body.skeleton.boneInverses[i]).invert()); return (h.userData._hf = new THREE.Vector3(0, 0, 1).applyQuaternion(bq.invert()).normalize()); }
+function aimBoneAt(h, bone, p, k) { h.updateMatrixWorld(true); const lf = headForwardLocal(h); const fwd = lf.clone().applyQuaternion(b0(h).Head.getWorldQuaternion(new THREE.Quaternion()));
+  const dir = p.clone().sub(b0(h).Head.getWorldPosition(new THREE.Vector3())).normalize(); const q = new THREE.Quaternion().setFromUnitVectors(fwd, dir); q.slerp(new THREE.Quaternion(), 1 - k);
+  const pq = bone.parent.getWorldQuaternion(new THREE.Quaternion()), bq = bone.getWorldQuaternion(new THREE.Quaternion()); bone.quaternion.copy(pq.invert().multiply(q.multiply(bq))); h.updateMatrixWorld(true); }
+const b0 = (h) => h.userData.bones;
+export function lookAt(h, p, k = 0.9) { const b = b0(h); aimBoneAt(h, b.neck_01, p, 0.35 * k); aimBoneAt(h, b.Head, p, k); }
 
 // Sitzen: Becken der Figur (mit Sitz-Animation, z. B. Sitting_Idle_Loop) genau auf einen Sitzpunkt (Weltkoordinaten) setzen
 export function sitOn(h, seat, { lift = 0.02 } = {}) { h.updateMatrixWorld(true); const pel = h.userData.bones.pelvis.getWorldPosition(new THREE.Vector3());

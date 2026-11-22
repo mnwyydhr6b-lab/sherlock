@@ -15,6 +15,8 @@ Stilisierte 3D-Videospiel-Welt (Richtung Sims) mit menschennahen Figuren, die be
 | `set_strasse_nacht.png` | Set 1: Lindenweg nachts, Partyhaus Nr. 7, Gartentor, Ballons, Lichterketten |
 | `set_zimmer_bett.png` / `set_zimmer_schreibtisch.png` | Set 2: Jugendzimmer von „Du“ nachts (LED-Streifen, Gaming-Ecke) |
 | `set_schule_tag.png` | Set 3: Gesamtschule Lindenhof bei Tag, Schulhof mit Tischtennisplatte |
+| `mimik.png` | Gesichtsausdrücke von Du und Mia (neutral, freut sich, lacht, traurig, wütend, überrascht, Seitenblick, peinlich berührt) |
+| `profilbild.png` | Profilbild (Du, verschränkte Arme) |
 
 Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus demselben Spiel aussieht.
 
@@ -59,6 +61,11 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 - Tag: warme Sonne, blauer Himmel.
 - Innen: Licht kommt von sichtbaren Quellen (Lampe, LED, Monitor, Handy).
 - Pink-Licht sparsam einsetzen (`pinkI` ca. 0,7).
+
+**Mimik und Gestik**
+- Emotionen über `face.expr(...)` zeigen, beim Sprechen immer `lipAt` verwenden, alle Figuren blinzeln lassen (`blinkAt`).
+- Starke Gefühle von „Du“ lieber über Ich-Perspektive, Körpersprache (Animationen), Licht und Ton erzählen statt über Großaufnahmen.
+- Fingergesten sind noch nicht verlässlich. Bis der Hand-Baukasten steht, Hände über Animationen und `armIK` führen und keine Fingerposen von Hand bauen.
 
 **Kamera**
 - Format 1080×1920 (Hochkant).

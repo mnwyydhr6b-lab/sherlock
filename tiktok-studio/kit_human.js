@@ -106,8 +106,8 @@ const FOOT_B = new Set(['foot_l', 'foot_r', 'ball_l', 'ball_r', 'ball_leaf_l', '
 export function makeHuman(o) {
   const src = o.sex === 'female' ? A.female : A.male;
   const root = SkeletonUtils.clone(src.scene);
-  let body = null, eyebrows = null;
-  root.traverse(m => { if (m.isSkinnedMesh) { m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; if (/superhero/i.test(m.name)) body = m; if (/eyebrow/i.test(m.name)) eyebrows = m; } });
+  let body = null, eyebrows = null, eyes = null;
+  root.traverse(m => { if (m.isSkinnedMesh) { m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; if (/superhero/i.test(m.name)) body = m; if (/eyebrow/i.test(m.name)) eyebrows = m; if (/^eyes$/i.test(m.name)) eyes = m; } });
   body.material = body.material.clone(); body.material.map = A.skin[o.sex === 'female' ? 'female' : 'male'][o.skin || 'light']; body.material.needsUpdate = true;
   if (eyebrows) { eyebrows.material = eyebrows.material.clone(); eyebrows.material.color = new THREE.Color(o.hairColor ?? 0x3a2416); }
   const bindY = (v) => v.y; // model space (feet at 0)
@@ -144,9 +144,11 @@ export function makeHuman(o) {
     g.setAttribute('cov', new THREE.BufferAttribute(cov, 2)); g.setAttribute('bindPos', p.clone()); }
   { const tp = topClip.map(q => insideExpr(q)).join(' && ');
     const pp = `vBindPos.y < 1.02 && vBindPos.y > 0.105`;
+    body.material.userData.uMouthOpen = { value: 0 };
     body.material.onBeforeCompile = (sh) => {
-      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 bindPos;\nattribute vec2 cov;\nvarying vec3 vBindPos;\nvarying vec2 vCov;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvBindPos = bindPos; vCov = cov;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vBindPos;\nvarying vec2 vCov;').replace('void main() {', `void main() {\nif (vBindPos.y < 0.09) discard;\nif (vCov.x > 0.5 && ${tp}) discard;\nif (vCov.y > 0.5 && ${pp}) discard;`);
+      sh.uniforms.uMouthOpen = body.material.userData.uMouthOpen;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 bindPos;\nattribute vec2 cov;\nattribute float mouthMask;\nvarying float vMouthMask;\nvarying vec3 vBindPos;\nvarying vec2 vCov;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvMouthMask = mouthMask;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvBindPos = bindPos; vCov = cov;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uMouthOpen;\nvarying float vMouthMask;\nvarying vec3 vBindPos;\nvarying vec2 vCov;').replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb *= mix(1.0, 0.1, clamp(vMouthMask * uMouthOpen * 1.8, 0.0, 1.0));').replace('void main() {', `void main() {\nif (vBindPos.y < 0.09) discard;\nif (vCov.x > 0.5 && ${tp}) discard;\nif (vCov.y > 0.5 && ${pp}) discard;`);
     };
     body.material.customProgramCacheKey = () => 'body-' + tp; }
   // ---- rigid accessories on bones ----
@@ -164,7 +166,7 @@ export function makeHuman(o) {
   if (o.hair) addHair(o.hair, o.hairColor ?? 0x3a2416);
   if (o.beard) addHair('Beard', o.hairColor ?? 0x3a2416);
   // collar ring at the neckline
-  { const nk = bonesBy.neck_01.getWorldPosition(new THREE.Vector3()); const ringMat = topMat.clone(); ringMat.color = topMat.color.clone().multiplyScalar(0.72); const ring = new THREE.Mesh(new THREE.TorusGeometry(top.type === 'tee' ? 0.066 : 0.072, top.type === 'tee' ? 0.01 : 0.017, 10, 32), ringMat); ring.scale.set(1.25, 1.0, 1.0); ring.rotation.x = Math.PI / 2 - 0.25; ring.castShadow = true;
+  { const nk = bonesBy.neck_01.getWorldPosition(new THREE.Vector3()); const ringMat = topMat.clone(); ringMat.color = topMat.color.clone().multiplyScalar(0.72); const ring = new THREE.Mesh(new THREE.TorusGeometry(top.type === 'tee' ? 0.066 : 0.075, top.type === 'tee' ? 0.01 : 0.024, 12, 40), ringMat); ring.scale.set(1.25, 1.0, 1.0); ring.rotation.x = Math.PI / 2 - 0.25; ring.castShadow = true;
     const hb2 = new THREE.Matrix4().copy(bonesBy.spine_03.matrixWorld).invert(); attach('spine_03', ring, new THREE.Vector3(nk.x, 1.515, nk.z + 0.005)); ring.quaternion.premultiply(new THREE.Quaternion().setFromRotationMatrix(hb2)); }
   // hood lying on the upper back (roll around the neck + flat pouch), rigid on spine_03
   if (top.type === 'hoodie' && o.hood !== false) { const PB = body.geometry.attributes.position; const nk = boneRestPos(body, 'neck_01');
@@ -210,6 +212,7 @@ export function makeHuman(o) {
   const update = (t) => { mixer.setTime(t); applyBuild(); };
   update(o.time ?? 0.5);
   root.userData = { mixer, play, update, bones: bonesBy, body, applyBuild, clips };
+  root.userData.face = faceRig(o.sex === 'female' ? 'female' : 'male', body, eyes, eyebrows);
   if (o.x !== undefined) root.position.set(o.x, o.y ?? 0, o.z ?? 0);
   if (o.ry !== undefined) root.rotation.y = o.ry;
   return root;
@@ -232,3 +235,58 @@ export function armIK(root, side, target, pole) {
 }
 // rotate a bone about a world axis
 export function rotBoneWorld(root, bone, axis, ang) { root.updateMatrixWorld(true); const qW = new THREE.Quaternion().setFromAxisAngle(axis, ang); const pq = bone.parent.getWorldQuaternion(new THREE.Quaternion()); const bq = bone.getWorldQuaternion(new THREE.Quaternion()); bone.quaternion.copy(pq.invert().multiply(qW.multiply(bq))); root.updateMatrixWorld(true); }
+
+// ---------------------------------------------------------------- Mimik (prozedurale Morph-Targets; die UBC-Köpfe haben keine Blendshapes)
+// face.set({ smileL, smileR, frown, jawOpen, blink, wide, squint, lookL, lookR, lookUp, lookDown, browsUp, browsInnerUp, browsAngry })
+// face.expr('happy' | 'laugh' | 'sad' | 'angry' | 'surprised' | 'shocked' | 'smirk' | 'sideeye' | 'awkward' | 'neutral', staerke)
+export const EXPRESSIONS = {
+  neutral: {}, happy: { smileL: 1, smileR: 1, squint: 0.25, browsUp: 0.2 }, laugh: { smileL: 1, smileR: 1, jawOpen: 0.6, squint: 0.5, browsUp: 0.3 },
+  sad: { frown: 1, browsInnerUp: 1, squint: 0.2, lookDown: 0.35 }, angry: { browsAngry: 1, frown: 0.5, squint: 0.35 },
+  surprised: { browsUp: 1, wide: 0.8, jawOpen: 0.45 }, shocked: { browsUp: 1, wide: 1, jawOpen: 0.85 }, smirk: { smileL: 0.9, browsAngry: 0.15, squint: 0.15 },
+  sideeye: { lookL: 1, browsAngry: 0.35, squint: 0.25, smileR: 0.15 }, awkward: { smileL: 0.55, smileR: 0.35, browsInnerUp: 0.6 },
+};
+const FACE_LM = { male: { mouthY: 1.6245, cornerX: 0.031, cornerY: 1.6205, frontZ: 0.095, chinY: 1.587 }, female: { mouthY: 1.583, cornerX: 0.030, cornerY: 1.5805, frontZ: 0.097, chinY: 1.548 } };
+const FACE_DONE = new WeakSet();
+function faceRig(sex, body, eyes, brows) {
+  const L = FACE_LM[sex]; const G = (d, r) => Math.exp(-(d / r) * (d / r));
+  const morph = (mesh, names, fn) => { if (!mesh) return; const g = mesh.geometry; if (!FACE_DONE.has(g)) { const P = g.attributes.position, n = P.count; const arrs = names.map(() => new Float32Array(n * 3)); const v = new THREE.Vector3();
+      for (let i = 0; i < n; i++) { v.fromBufferAttribute(P, i); fn(v, i, (k, dx, dy, dz) => { const a = arrs[k]; a[i * 3] += dx; a[i * 3 + 1] += dy; a[i * 3 + 2] += dz; }); }
+      g.morphAttributes.position = arrs.map(a => new THREE.Float32BufferAttribute(a, 3)); g.morphTargetsRelative = true; FACE_DONE.add(g); }
+    mesh.morphTargetDictionary = {}; names.forEach((nm, k) => mesh.morphTargetDictionary[nm] = k); mesh.morphTargetInfluences = names.map(() => 0); };
+  // --- face (body mesh): jawOpen, smileL, smileR, frown + mouth mask attribute
+  const BODY = ['jawOpen', 'smileL', 'smileR', 'frown'];
+  if (body && !body.geometry.attributes.mouthMask) { const P = body.geometry.attributes.position; const mm = new Float32Array(P.count); const v = new THREE.Vector3();
+    for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); const yc = L.mouthY + (L.cornerY - L.mouthY) * Math.min(1, (v.x / L.cornerX) ** 2);
+      if (v.z > 0.04 && Math.abs(v.x) < L.cornerX * 1.02 && Math.abs(v.y - yc) < 0.007 && v.z < L.frontZ - 0.005) mm[i] = 1; }
+    body.geometry.setAttribute('mouthMask', new THREE.BufferAttribute(mm, 1)); }
+  morph(body, BODY, (v, i, add) => { if (v.z < 0.03 || v.y < L.chinY - 0.06 || v.y > L.mouthY + 0.07) return; const ax = Math.abs(v.x), s = Math.sign(v.x) || 1;
+    const yc = L.mouthY + (L.cornerY - L.mouthY) * Math.min(1, (ax / L.cornerX) ** 2);
+    // jaw / lower lip down
+    if (v.y < yc - 0.0004) { const wx = Math.exp(-((ax / 0.055) ** 4)), wy = Math.min(1, Math.max(0, (v.y - (L.chinY - 0.04)) / 0.03)); add(0, 0, -0.012 * wx * wy, -0.003 * wx * wy); }
+    else if (v.y < yc + 0.013) { const fx = Math.exp(-((ax / (L.cornerX * 1.1)) ** 6)); add(0, 0, 0.0022 * fx * G(v.y - yc, 0.008), 0); }
+    // smile: corner up/out/back + cheek bulge (per side)
+    const d = Math.hypot(ax - L.cornerX, v.y - L.cornerY); const w = G(d, 0.014); const dk = Math.hypot(ax - (L.cornerX + 0.012), v.y - (L.cornerY + 0.02)); const wk = G(dk, 0.018);
+    const k = s > 0 ? 1 : 2; add(k, s * 0.0042 * w, 0.0115 * w + 0.0065 * wk, -0.0025 * w + 0.0035 * wk);
+    // frown: corners down
+    add(3, 0, -0.0105 * w, 0.0005 * w); });
+  // --- eyes: blink, wide, squint, look
+  const EYES = ['blink', 'wide', 'squint', 'lookL', 'lookR', 'lookUp', 'lookDown'];
+  if (eyes) { const P = eyes.geometry.attributes.position; const c = { l: new THREE.Vector3(), r: new THREE.Vector3() }, n = { l: 0, r: 0 }; const v = new THREE.Vector3();
+    for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); const sd = v.x > 0 ? 'l' : 'r'; c[sd].add(v); n[sd]++; } c.l.divideScalar(n.l || 1); c.r.divideScalar(n.r || 1);
+    const rot = (v, cc, axis, a) => v.clone().sub(cc).applyAxisAngle(axis, a).add(cc).sub(v);
+    morph(eyes, EYES, (v, i, add) => { const cc = v.x > 0 ? c.l : c.r; const dy = v.y - cc.y, dx = v.x - cc.x;
+      add(0, 0, -dy * 0.92, -0.002); add(1, dx * 0.06, dy * 0.2, 0); add(2, 0, -dy * 0.42, 0);
+      let r = rot(v, cc, new THREE.Vector3(0, 1, 0), 0.32); add(3, r.x, r.y, r.z); r = rot(v, cc, new THREE.Vector3(0, 1, 0), -0.32); add(4, r.x, r.y, r.z);
+      r = rot(v, cc, new THREE.Vector3(1, 0, 0), -0.25); add(5, r.x, r.y, r.z); r = rot(v, cc, new THREE.Vector3(1, 0, 0), 0.25); add(6, r.x, r.y, r.z); }); }
+  // --- brows
+  const BROWS = ['browsUp', 'browsInnerUp', 'browsAngry'];
+  morph(brows, BROWS, (v, i, add) => { const u = Math.min(1, Math.abs(v.x) / 0.062), s = Math.sign(v.x) || 1;
+    add(0, 0, 0.0065, 0.0005); add(1, -s * 0.0012 * (1 - u), 0.011 * Math.pow(1 - u, 1.3), 0); add(2, -s * 0.003 * (1 - u), -0.0085 * Math.pow(1 - u, 1.2) + 0.0025 * u, 0.0018 * (1 - u)); });
+  const meshes = [[body, BODY], [eyes, EYES], [brows, BROWS]];
+  const face = {
+    set(vals) { for (const [m, names] of meshes) if (m) names.forEach((nm, k) => { if (nm in vals) m.morphTargetInfluences[k] = vals[nm]; }); if ('jawOpen' in vals && body) body.material.userData.uMouthOpen.value = vals.jawOpen; return face; },
+    reset() { for (const [m, names] of meshes) if (m) m.morphTargetInfluences.fill(0); if (body) body.material.userData.uMouthOpen.value = 0; return face; },
+    expr(name, k = 1, extra = {}) { face.reset(); const e = EXPRESSIONS[name] || {}; const vals = {}; for (const key in e) vals[key] = e[key] * k; face.set({ ...vals, ...extra }); return face; },
+  };
+  return face;
+}

@@ -51,3 +51,9 @@ export class Actor {
 }
 // Kamerafahrt: keys für pos [x,y,z], target [x,y,z], fov
 export function cameraAt(stage, t, { pos, target, fov = null }) { const p = keys(t, pos), g = keys(t, target); stage.camera.position.set(p[0], p[1], p[2]); stage.camera.lookAt(g[0], g[1], g[2]); if (fov) { stage.camera.fov = keys(t, fov); stage.camera.updateProjectionMatrix(); } }
+
+// ---------------------------------------------------------------- Mimik über die Zeit
+// Blinzeln: alle 2,5–5 s ein kurzes Blinzeln (0,14 s); seed macht es pro Figur verschieden
+export function blinkAt(t, seed = 1) { let s = seed * 9301 % 233280, tt = 0.6 + (s / 233280) * 1.5; while (tt < t + 1) { if (t >= tt && t < tt + 0.14) { const k = (t - tt) / 0.14; return Math.sin(k * Math.PI); } s = (s * 9301 + 49297) % 233280; tt += 2.5 + (s / 233280) * 2.5; } return 0; }
+// Mundbewegung aus einer Lautstärke-Hüllkurve (JSON aus envelope.py: { fps, values[] }), Sprechbeginn "start" in Sekunden
+export function lipAt(t, env, start = 0, gain = 1.0) { if (!env) return 0; const i = Math.floor((t - start) * env.fps); if (i < 0 || i >= env.values.length) return 0; const v = env.values[i]; return Math.min(1, Math.pow(v, 0.7) * gain); }

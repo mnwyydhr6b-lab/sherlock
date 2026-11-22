@@ -157,6 +157,13 @@
     - Sitzen: Sitting_Idle_Loop, Sitting_Talking_Loop
     - Gesten: Consume, Interact, Yes, Hit_Chest
   - Handy-Pose: `posePhone(h)` aus `kit_cast.js`.
+  - **Mimik (seit 22.11.):** prozedurale Gesichtsausdrücke, denn die UBC-Köpfe haben keine Blendshapes.
+    - Ausdrücke: `h.userData.face.expr('happy' | 'laugh' | 'sad' | 'angry' | 'surprised' | 'shocked' | 'smirk' | 'sideeye' | 'awkward' | 'neutral', stärke)`
+    - Einzelwerte: `face.set({ smileL, smileR, frown, jawOpen, blink, wide, squint, lookL, lookR, lookUp, lookDown, browsUp, browsInnerUp, browsAngry })`
+    - Im Video jedes Frame: `face.reset(); face.set(werte)`
+    - Blinzeln: `blinkAt(t, seed)`. Lippen zur Stimme: `lipAt(t, hüllkurve, start, 0.42)`. Die Hüllkurve kommt aus `python3 envelope.py audio/x.mp3 24 > audio/x.env.json`.
+    - Vorlage: `mimik_demo.html` / `mimik_demo.mp4`. Referenzbild: `look/mimik.png`.
+  - `lookAt(h, punkt, k)` dreht Hals und Kopf jetzt exakt zum Ziel, auch wenn die Animation den Kopf neigt.
   - Kleidungsdetails: Hoodie mit Kapuze, Kordeln und Bauchtasche; Jacke mit Reißverschluss; Hemd mit Knopfleiste.
 - `kit_house.js` – `makeHouse()`: prozedurales Einfamilienhaus.
   - Biberschwanz-Dach, Rollläden, Fenster mit Innenraum-Atlas (`TILE.*`, Party-Fenster mit tanzenden Silhouetten)
