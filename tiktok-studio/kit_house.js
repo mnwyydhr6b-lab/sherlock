@@ -51,7 +51,7 @@ export function interiorAtlas() {
   for (let i = 0; i < 16; i++) tile(i, () => { const v = g.createLinearGradient(0, 0, 0, S); v.addColorStop(0, 'rgba(0,0,0,0.45)'); v.addColorStop(0.12, 'rgba(0,0,0,0)'); g.fillStyle = v; g.fillRect(0, 0, S, S); });
   const t = tex(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; ATLAS = t; return t;
 }
-function glassGeo(w, h, tileIdx) { const geo = new THREE.PlaneGeometry(w, h); const uv = geo.attributes.uv; const tx = tileIdx % 4, ty = (tileIdx / 4) | 0; const pad = 0.01;
+export function glassGeo(w, h, tileIdx) { const geo = new THREE.PlaneGeometry(w, h); const uv = geo.attributes.uv; const tx = tileIdx % 4, ty = (tileIdx / 4) | 0; const pad = 0.01;
   for (let i = 0; i < uv.count; i++) { const u = uv.getX(i), v = uv.getY(i); uv.setXY(i, (tx + pad + u * (1 - 2 * pad)) / 4, 1 - (ty + pad + (1 - v) * (1 - 2 * pad)) / 4); } return geo; }
 
 // ---------------------------------------------------------------- shared materials
@@ -69,6 +69,8 @@ function mats() {
   return M;
 }
 
+// Fensterglas mit Innenraum-Kachel (gemeinsames Material, Leuchtkraft über setWindowGlow)
+export function windowGlass(w, h, tile) { return new THREE.Mesh(glassGeo(w, h, tile), mats().glass); }
 // Leuchtkraft aller Fenster-Innenräume (Nacht ~1.25, Tag ~0.12)
 export function setWindowGlow(v) { mats().glass.emissiveIntensity = v; }
 

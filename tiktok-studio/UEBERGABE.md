@@ -1,7 +1,7 @@
 # Übergabe – TikTok-Projekt „Ungeschriebene Regeln“
 
 > Lebendes Dokument. Stand: 22.11.2026. Wird bis zum Start laufend ergänzt.
-> Neuer Chat: Diese Datei zuerst komplett lesen, dann bei **„7. Nächste Schritte“** weitermachen.
+> Neuer Chat: Diese Datei zuerst komplett lesen, dann **`LOOK_BIBEL.md`** lesen und die Bilder in **`look/`** ansehen. Danach bei **„7. Nächste Schritte“** weitermachen.
 
 ## 1. Ziel und Rahmen
 
@@ -52,8 +52,12 @@
 ## 3. Look – „Spielwelt“ (vom Nutzer freigegeben am 22.11.2026)
 
 - Look: wie ein 3D-Videospiel, menschennahe Figuren, aber nicht realistisch (Richtung Sims).
-- Welt: deutsche Vorstadt bei Nacht mit Partyhaus.
-- Key-Visual: `tiktok-studio/spielwelt_keyvisual.png`
+- Welt: Deutschland im Alltag. Drei fertige Orte im selben Look:
+  - Straße/Partyhaus bei Nacht
+  - Jugendzimmer
+  - Schule bei Tag
+- **Look-Regeln, Referenzbilder und Arbeitsablauf: `LOOK_BIBEL.md` + Ordner `look/`.** Damit lassen sich neue Orte im gleichen Look bauen.
+- Key-Visual: `tiktok-studio/spielwelt_keyvisual.png` (aktuelle Fassung: `look/set_strasse_nacht.png`)
 - **Abgelehnt, nicht wieder vorschlagen:**
   - Klötzchen-, Minecraft-, Roblox- und Comic-Look, Holz-Spielzeugwelt („Holzwelt“)
   - Mystery, Märchen-Bürokratie, Alltags-Krimi-Rätsel, „seltsame Orte“, Aufzug-Horror
@@ -72,9 +76,10 @@
 
 **Befehle**
 
-- Standbild rendern:
+- Standbild rendern (Szenen-Seiten: `spielwelt.html`, `zimmer.html?shot=bett|desk`, `schule.html`, `cast.html?mode=cast|turn` mit Breite/Höhe 1920 1080):
   ```
-  node still.js "spielwelt.html?pinkI=0.7&exp=1.12&sat=1.15" out.png 2
+  node still.js "spielwelt.html" out.png 2
+  node still.js "cast.html?mode=cast" out.png 2 1920 1080
   ```
   Danach mit PIL (Lanczos) von 2160×3840 auf 1080×1920 verkleinern.
 - Video rendern:
@@ -96,6 +101,23 @@
 | `pinkI`, `hemi`, `moon`, `lampI`, `env` | Licht |
 | `nochar=1` | ohne Figuren (schnelle Tests) |
 
+**Aufbau (neu seit 22.11.)**
+
+- `kit_look.js` – `createStage({ preset })`: Renderer, Himmel, Licht und Nachbearbeitung als feste Presets.
+  - Presets: `nacht`, `abend`, `tag`, `innen_nacht`, `innen_tag`, `studio`
+  - Methoden: `view()`, `build({ focus })`, `aimKey()`, `ready()`
+- `kit_cast.js` – feste Besetzung über `spawn(name)`, plus Posen-Helfer:
+  - `posePhone` (Handy halten), `holdCup` (Becher halten), `sitOn` (sitzen)
+  - `faceTo` (Figur zu einem Punkt drehen), `lookAt` (Kopf zu einem Punkt drehen)
+- `kit_interior.js` – `makeRoom()` mit Fenstern, Türen, Heizkörper und Rollladenkasten.
+  - Möbel: Bett, Schreibtisch, Gaming-Stuhl, Monitor, Tastatur, Lampe, Schrank, Regal
+  - Deko: Poster, Teppich, LED-Streifen, Pflanze, Rucksack, Klamotten, Dose
+- Sets:
+  - `set_strasse.js` (`buildStrasse`)
+  - `set_zimmer.js` (`buildZimmer`)
+  - `set_schule.js` (`buildSchule`: Schulhof, Tischtennis, Basketball, Fahrräder, Bushaltestelle)
+- `still.js` nimmt optional Breite und Höhe an.
+
 **Bausteine (Kits)**
 
 - `kit_human.js`
@@ -114,7 +136,8 @@
     - Bewegung: Dance_Loop, Walk_Loop, Walk_Formal_Loop, Jog_Fwd_Loop, Push_Loop
     - Sitzen: Sitting_Idle_Loop, Sitting_Talking_Loop
     - Gesten: Consume, Interact, Yes, Hit_Chest
-  - Handy-Pose: Idle_Loop plus `armIK` der rechten Hand vor die Brust, Kopf über `rotBoneWorld` nach unten geneigt (siehe `spielwelt.html`).
+  - Handy-Pose: `posePhone(h)` aus `kit_cast.js`.
+  - Kleidungsdetails: Hoodie mit Kapuze, Kordeln und Bauchtasche; Jacke mit Reißverschluss; Hemd mit Knopfleiste.
 - `kit_house.js` – `makeHouse()`: prozedurales Einfamilienhaus.
   - Biberschwanz-Dach, Rollläden, Fenster mit Innenraum-Atlas (`TILE.*`, Party-Fenster mit tanzenden Silhouetten)
   - offene Tür mit beleuchtetem Flur, Vordach, Wandlampe, Hausnummer, Garage, Dachfenster, Schornstein
@@ -167,7 +190,9 @@
 - [ ] Serien-Bibel: Hauptfigur, wiederkehrende Figuren, Orte, Stimmen, Musik, Ende-Karte
 - [ ] Posting-Plan: Uhrzeiten, Captions, Hashtags, Titelbilder, KI-Kennzeichnung
 - [ ] Animations-System für die Spielwelt (Zeitleiste, Kamerafahrten, Laufen, Ton) und Testclip
-- [ ] Sets bauen: Jugendzimmer (mit Handy-Chat-Overlay) und Schulhof/Bushaltestelle (Straße/Partyhaus ist fertig)
+- [x] Look-Baukasten, feste Besetzung (Charakterbogen) und drei Sets (Straße, Jugendzimmer, Schule) mit Referenzbildern in `look/`
+- [x] `LOOK_BIBEL.md`: Regeln und Arbeitsablauf für neue Orte
+- [ ] Handy-Chat-Overlay (2D-Einblendung für Chat- und Story-Szenen)
 - [ ] Optional: Vorrat an fertigen Videos für die erste Woche
 
 ## 7. Nächste Schritte

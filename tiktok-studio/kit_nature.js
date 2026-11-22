@@ -29,7 +29,7 @@ export function makeTree(o = {}) {
     let v; do { v = new THREE.Vector3(r() * 2 - 1, r() * 2 - 1, r() * 2 - 1); } while (v.lengthSq() > 1 || v.lengthSq() < 0.05);
     const shell = i < N * 0.72 ? 0.82 + r() * 0.18 : 0.35 + r() * 0.4; v.normalize().multiplyScalar(shell);
     d.position.set(C.x + v.x * CR, C.y + v.y * CR * sq, C.z + v.z * CR);
-    const s = (0.3 + r() * 0.16) * CR; d.scale.set(s, s * 0.82, s); d.rotation.set(r() * 6.3, r() * 6.3, r() * 6.3); d.updateMatrix(); im.setMatrixAt(i, d.matrix);
+    const s = (0.3 + r() * 0.16) * CR * (o.clumpScale ?? 1); d.scale.set(s, s * 0.82, s); d.rotation.set(r() * 6.3, r() * 6.3, r() * 6.3); d.updateMatrix(); im.setMatrixAt(i, d.matrix);
     const pal = o.palette ?? [0x4f7a2a, 0x6b8f30, 0x3d6324]; col.set(pal[Math.floor(r() * pal.length)]);
     const yk = (v.y + 1) / 2; col.multiplyScalar(0.62 + 0.5 * yk + (r() - 0.5) * 0.12); im.setColorAt(i, col);
   }

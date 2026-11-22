@@ -14,7 +14,7 @@ import { cnv, tex, makeRng } from './kit_world.js';
 // sky: gradient stops (top -> bottom, horizon ~0.5); key = main directional light (moon / sun) with shadows; rim = second, unshadowed
 export const PRESETS = {
   nacht: { sky: [[0, '#060a1e'], [0.22, '#121c46'], [0.36, '#26306a'], [0.43, '#4a3f86'], [0.475, '#9a5a96'], [0.495, '#e98a7e'], [0.505, '#ffb27a'], [0.52, '#3a2a3a'], [1, '#141018']],
-    stars: true, moon: true, clouds: 'rgba(255,170,190,0.22)', fog: [0x2a2c4a, 0.012], env: 0.55, envBlobs: 0xffb070, envGround: 0x14121c,
+    stars: true, moon: true, clouds: 'rgba(255,170,190,0.1)', fog: [0x2a2c4a, 0.012], env: 0.55, envBlobs: 0xffb070, envGround: 0x14121c,
     hemi: [0x5a70d8, 0x221d2a, 0.3], key: [0x9fb4ff, 1.0, -38, 34, 26], rim: [0xff9a6a, 0.35, 60, 8, -40],
     exp: 1.12, sat: 1.15, con: 0.3, vig: 0.85, bloom: 0.5, bth: 0.9, ao: 0.85 },
   abend: { sky: [[0, '#1d2a66'], [0.25, '#3a4a90'], [0.38, '#7a68a8'], [0.45, '#d98a8a'], [0.49, '#ffb27a'], [0.505, '#ffd49a'], [0.52, '#6a4a4a'], [1, '#2a2024']],
@@ -23,8 +23,8 @@ export const PRESETS = {
     exp: 1.0, sat: 1.12, con: 0.28, vig: 0.75, bloom: 0.4, bth: 0.95, ao: 0.85 },
   tag: { sky: [[0, '#3f7fd8'], [0.3, '#6aa2e6'], [0.45, '#a8cdf2'], [0.5, '#d8eaf8'], [0.52, '#9aa6a0'], [1, '#5a5a50']],
     stars: false, moon: false, clouds: 'rgba(255,255,255,0.85)', fog: [0xb8cce4, 0.005], env: 1.0, envBlobs: null, envGround: 0x6a6658,
-    hemi: [0xbcd4ff, 0x6a5a48, 0.75], key: [0xfff0d8, 3.2, 35, 50, 20], rim: [0x9ab8ff, 0.4, -40, 20, -30],
-    exp: 0.92, sat: 1.1, con: 0.22, vig: 0.5, bloom: 0.22, bth: 1.0, ao: 0.9 },
+    hemi: [0xbcd4ff, 0x6a5a48, 0.9], key: [0xfff0d8, 3.4, 35, 50, 20], rim: [0x9ab8ff, 0.4, -40, 20, -30],
+    exp: 1.02, sat: 1.1, con: 0.22, vig: 0.5, bloom: 0.22, bth: 1.0, ao: 0.9 },
   // Innenräume: Himmel nur durchs Fenster sichtbar, Licht kommt vor allem von den Lampen des Sets
   innen_nacht: { base: 'nacht', env: 0.18, hemi: [0x4a5aa0, 0x1a1418, 0.1], key: [0x9fb4ff, 0.45, -38, 34, 26], rim: null, fog: null, exp: 1.15, vig: 0.9, bloom: 0.55, bth: 0.85 },
   innen_tag: { base: 'tag', env: 0.6, hemi: [0xbcd4ff, 0x6a5a48, 0.35], key: [0xfff0d8, 2.6, 35, 50, 20], rim: null, fog: null, exp: 1.0, vig: 0.6, bloom: 0.25 },
@@ -42,9 +42,13 @@ export function buildSky(target, P, { withStars = true, moonPos = [186, 128, -16
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); target.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xdfe6ff, size: 1.1, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.85 }))); }
   if (withStars && P.moon) { const mt = cnv(256, 256); { const g = mt.getContext('2d'); const gr = g.createRadialGradient(128, 128, 60, 128, 128, 128); gr.addColorStop(0, 'rgba(255,248,225,1)'); gr.addColorStop(0.5, 'rgba(255,240,210,1)'); gr.addColorStop(0.52, 'rgba(255,235,200,0.35)'); gr.addColorStop(1, 'rgba(255,230,200,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); g.fillStyle = 'rgba(200,190,170,0.35)'; for (const [x, y, rr] of [[110, 110, 14], [150, 140, 10], [120, 160, 8], [145, 100, 6]]) { g.beginPath(); g.arc(x, y, rr, 0, 6.28); g.fill(); } }
     const moon = new THREE.Mesh(new THREE.PlaneGeometry(26, 26), new THREE.MeshBasicMaterial({ map: tex(mt), transparent: true, fog: false, depthWrite: false })); moon.position.set(...moonPos); moon.lookAt(0, 0, 0); target.add(moon); target.userData.moon = moon; }
-  if (withStars && P.clouds) { const day = P.sky === PRESETS.tag.sky; const cl = cnv(1024, 256); { const g = cl.getContext('2d'); const r = makeRng(31); const n = day ? 46 : 70;
-      for (let i = 0; i < n; i++) { const x = r() * 1024, y = (day ? 60 : 90) + r() * (day ? 120 : 90), w = (day ? 120 : 80) + r() * 220, h = (day ? 30 : 8) + r() * (day ? 40 : 16); const gr = g.createRadialGradient(x, y, 1, x, y, w / 2); gr.addColorStop(0, P.clouds); gr.addColorStop(1, P.clouds.replace(/[\d.]+\)$/, '0)')); g.fillStyle = gr; g.save(); g.translate(x, y); g.scale(1, h / w); g.beginPath(); g.arc(0, 0, w / 2, 0, 6.28); g.fill(); g.restore(); } }
-    const clT = tex(cl); clT.wrapS = THREE.RepeatWrapping; const cloud = new THREE.Mesh(new THREE.CylinderGeometry(260, 260, 120, 48, 1, true), new THREE.MeshBasicMaterial({ map: clT, transparent: true, side: THREE.BackSide, fog: false, depthWrite: false })); cloud.position.y = 30; target.add(cloud); }
+  if (withStars && P.clouds) { const day = P.sky === PRESETS.tag.sky; const cl = cnv(1024, 256); { const g = cl.getContext('2d'); const r = makeRng(31);
+      if (day) { // puffy cumulus: clusters of soft circles, flat-ish bottoms
+        for (let i = 0; i < 22; i++) { const cx = r() * 1024, cy = 80 + r() * 110, sc = 0.5 + r() * 0.7;
+          for (let k = 0; k < 7; k++) { const px = cx + (k - 3) * 14 * sc + (r() - 0.5) * 10 * sc, py = cy - Math.sin(k / 6 * Math.PI) * 10 * sc + (r() - 0.5) * 4 * sc, rad = (12 + r() * 12) * sc;
+            const gr = g.createRadialGradient(px, py - rad * 0.3, rad * 0.1, px, py, rad); gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.7, 'rgba(240,244,252,0.8)'); gr.addColorStop(1, 'rgba(225,232,245,0)'); g.fillStyle = gr; g.beginPath(); g.arc(px, py, rad, 0, 6.28); g.fill(); } } }
+      else { for (let i = 0; i < 70; i++) { const x = r() * 1024, y = 90 + r() * 90, w = 80 + r() * 220, h = 8 + r() * 16; const gr = g.createRadialGradient(0, 0, 1, 0, 0, w / 2); gr.addColorStop(0, P.clouds); gr.addColorStop(1, P.clouds.replace(/[\d.]+\)$/, '0)')); g.fillStyle = gr; g.save(); g.translate(x, y); g.scale(1, h / w); g.beginPath(); g.arc(0, 0, w / 2, 0, 6.28); g.fill(); g.restore(); } } }
+    const clT = tex(cl); clT.wrapS = THREE.RepeatWrapping; const cloud = new THREE.Mesh(new THREE.CylinderGeometry(260, 260, day ? 220 : 120, 48, 1, true), new THREE.MeshBasicMaterial({ map: clT, transparent: true, side: THREE.BackSide, fog: false, depthWrite: false })); cloud.position.y = day ? 118 : 30; target.add(cloud); }
 }
 
 // ---------------------------------------------------------------- stage

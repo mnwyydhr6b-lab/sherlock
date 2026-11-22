@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1920px;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Referenz "Schulhof bei Tag": Du mit Rucksack, die Clique lacht an der Tischtennisplatte (Folge 4 / 10)
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { buildSchule, SCHANCHOR } from './set_schule.js';
+import { loadHumanAssets, spawn, faceTo } from './kit_cast.js';
+import { makeBackpack } from './kit_interior.js';
+
+const stage = createStage({ preset: 'tag', shadowExtent: 30 });
+const { scene, qn, Q } = stage;
+async function main() {
+  await buildSchule(stage, {});
+  let focus = new THREE.Vector3(1.5, 1.6, 0.5);
+  if (!Q.has('nochar')) {
+    await loadHumanAssets();
+    const du = spawn('du', { anim: 'Idle_Loop', time: 0.4, x: qn('hx', 2.45), y: 0, z: qn('hz', -0.6), ry: 0 }); scene.add(du);
+    faceTo(du, new THREE.Vector3(-0.5, 0, -6)); du.rotation.y += qn('hry', 0.0);
+    du.updateMatrixWorld(true); { const sp = du.userData.bones.spine_03; const bp = makeBackpack(0x2b3a5a); const f = new THREE.Vector3(Math.sin(du.rotation.y), 0, Math.cos(du.rotation.y)); const pos = sp.getWorldPosition(new THREE.Vector3()).addScaledVector(f, -0.2).add(new THREE.Vector3(0, -0.32, 0)); bp.position.copy(pos); bp.rotation.y = du.rotation.y + Math.PI; scene.add(bp); bp.updateMatrixWorld(true); bp.applyMatrix4(new THREE.Matrix4().copy(sp.matrixWorld).invert()); sp.add(bp); }
+    focus = du.userData.bones.Head.getWorldPosition(new THREE.Vector3());
+    const grp = [
+      spawn('leon', { anim: 'Idle_Talking_Loop', time: 1.4, x: -2.7, y: 0, z: -5.4 }),
+      spawn('tarik', { anim: 'Idle_FoldArms_Loop', time: 0.6, x: -0.6, y: 0, z: -7.4 }),
+      spawn('jasmin', { anim: 'Idle_Talking_Loop', time: 2.3, x: 0.9, y: 0, z: -6.8 }),
+      spawn('mia', { anim: 'Idle_Loop', time: 1.1, x: 0.4, y: 0, z: -4.9 }),
+    ];
+    const c = new THREE.Vector3(-0.5, 0, -6.0); grp.forEach(h => { scene.add(h); faceTo(h, c); h.rotation.y += Math.PI; });
+    faceTo(grp[3], new THREE.Vector3(2.6, 0, -0.6)); faceTo(grp[0], new THREE.Vector3(2.6, 0, -0.6));
+    const ben = spawn('ben', { anim: 'Sitting_Idle_Loop', time: 0.5, x: 9.0, y: 0, z: -7.9, ry: 0.2 }); scene.add(ben);
+  }
+  stage.view({ pos: [2.2, 1.75, 3.2], target: [-0.6, 3.9, -24], fov: 54 }).build({ focus, aperture: 0.0007 }).ready();
+}
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>
