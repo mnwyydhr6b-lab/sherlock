@@ -2,6 +2,14 @@
 import * as THREE from 'three';
 import { makeRng, taperTube, blobGeo, std, add } from './kit_world.js';
 
+// Schatten-Stellvertreter: Laub wirft seinen Schatten über eine einfache Form (Ebene 3, nur für Schattenkameras sichtbar).
+// Spart beim Video-Rendern sehr viel Zeit; kit_look schaltet Ebene 3 für alle Schattenkameras frei.
+export const SHADOW_PROXY_LAYER = 3;
+let USE_PROXY = true; export function useShadowProxies(v) { USE_PROXY = v; }
+const proxyMat = new THREE.MeshBasicMaterial();
+function shadowProxy(parent, geo, x, y, z, sx, sy, sz) { const m = new THREE.Mesh(geo, proxyMat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.castShadow = true; m.receiveShadow = false; m.layers.set(SHADOW_PROXY_LAYER); parent.add(m); return m; }
+const PROXY_SPHERE = new THREE.SphereGeometry(1, 12, 9);
+
 const leafMat = () => { const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0 });
   // cheap fake subsurface: lift the shadowed side a little with the leaf colour
   m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * 0.035;'); };
@@ -34,6 +42,7 @@ export function makeTree(o = {}) {
     const yk = (v.y + 1) / 2; col.multiplyScalar(0.62 + 0.5 * yk + (r() - 0.5) * 0.12); im.setColorAt(i, col);
   }
   g.add(im); g.userData.crownCenter = C; g.userData.crownR = CR;
+  if (USE_PROXY) { im.castShadow = false; shadowProxy(g, PROXY_SPHERE, C.x, C.y, C.z, CR * 0.95, CR * sq * 0.95, CR * 0.95); }
   return g;
 }
 
@@ -51,6 +60,7 @@ export function makeHedge(len, h, dep, o = {}) {
     else { z = (r() - 0.5) * dep; y = r() * h; x = (r() < 0.5 ? -1 : 1) * (len / 2 - 0.04); }
     d.position.set(x, Math.max(0.08, y), z); const s = 0.055 + r() * 0.06; d.scale.set(s, s * 0.85, s); d.rotation.set(r() * 6, r() * 6, r() * 6); d.updateMatrix(); im.setMatrixAt(i, d.matrix);
     col.set(base).multiplyScalar(0.8 + r() * 0.55 + (y / h) * 0.35); if (r() < 0.12) col.offsetHSL(0.03, 0, 0.04); im.setColorAt(i, col); }
+  if (USE_PROXY) im.castShadow = false;
   g.add(im); return g;
 }
 
@@ -61,6 +71,7 @@ export function makeShrub(rad, o = {}) {
   const im = new THREE.InstancedMesh(geo, leafMat(), N); im.castShadow = true; im.receiveShadow = true; const d = new THREE.Object3D(), col = new THREE.Color();
   add(g, new THREE.SphereGeometry(rad * 0.85, 16, 12), std(new THREE.Color(base).multiplyScalar(0.5), 0.95), 0, rad * 0.9, 0);
   for (let i = 0; i < N; i++) { const v = new THREE.Vector3(r() * 2 - 1, r() * 1.4 - 0.4, r() * 2 - 1).normalize(); d.position.set(v.x * rad * 0.92, rad * 0.9 + v.y * rad * 0.85, v.z * rad * 0.92); const s = rad * (0.24 + r() * 0.12); d.scale.setScalar(s); d.rotation.set(r() * 6, r() * 6, r() * 6); d.updateMatrix(); im.setMatrixAt(i, d.matrix); col.set(o.palette ? o.palette[i % o.palette.length] : base).multiplyScalar(0.75 + r() * 0.45 + v.y * 0.15); im.setColorAt(i, col); }
+  if (USE_PROXY) im.castShadow = false;
   g.add(im); return g;
 }
 

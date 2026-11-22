@@ -59,7 +59,7 @@ export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = loca
   const P = resolvePreset(Q.get('preset') || preset);
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(window.devicePixelRatio || 1); renderer.setSize(W, H);
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = !Q.has('noshadow'); renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = qn('exp', P.exp);
   parent.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
@@ -82,11 +82,17 @@ export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = loca
     view({ pos, target, fov } = {}) { camera.fov = qn('fov', fov ?? camera.fov); camera.position.set(qn('cx', pos[0]), qn('cy', pos[1]), qn('cz', pos[2])); camera.lookAt(qn('tx', target[0]), qn('ty', target[1]), qn('tz', target[2])); camera.updateProjectionMatrix(); return stage; },
     // Schatten-Bereich des Hauptlichts auf den Ausschnitt legen
     aimKey(center, offset = null) { if (keyLight) { keyLight.target.position.copy(center); keyLight.position.copy(center).add(offset ? new THREE.Vector3(...offset) : new THREE.Vector3(P.key[2], P.key[3], P.key[4])); } return stage; },
+    // nur die wichtigsten Punkt-/Spotlichter aktiv lassen (jedes Licht kostet bei jedem Pixel Rechenzeit). Vor dem ersten Rendern aufrufen.
+    limitLights(center, keep = 8) { const L = []; scene.traverse(o => { if ((o.isPointLight || o.isSpotLight) && o.visible) L.push(o); });
+      const w = (l) => { const p = l.getWorldPosition(new THREE.Vector3()); const d = Math.max(0.5, p.distanceTo(center)); return l.intensity / (d * d) * (l.isSpotLight ? 3 : 1); };
+      L.sort((a, b) => w(b) - w(a)); L.slice(keep).forEach(l => l.visible = false); return stage; },
     build({ focus = null, aperture = 0.0009, maxblur = 0.0045 } = {}) {
+      scene.traverse(o => { if (o.isLight && o.shadow) o.shadow.camera.layers.enable(3); }); // Schatten-Stellvertreter (kit_nature)
       composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
-      const gtao = new GTAOPass(scene, camera, W, H); gtao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.4, thickness: 1.2, scale: 1, samples: 16 }); gtao.blendIntensity = qn('ao', P.ao ?? 0.85); composer.addPass(gtao);
-      if (qn('dof', 1) > 0 && focus) { bokeh = new BokehPass(scene, camera, { focus: camera.position.distanceTo(focus), aperture: qn('ap', aperture), maxblur }); composer.addPass(bokeh); }
-      composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), qn('bloom', P.bloom), 0.55, qn('bth', P.bth)));
+      stage.passes = {};
+      if (!Q.has('noao')) { const gtao = stage.passes.gtao = new GTAOPass(scene, camera, W, H); gtao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.4, thickness: 1.2, scale: 1, samples: qn('aos', 16) }); gtao.blendIntensity = qn('ao', P.ao ?? 0.85); composer.addPass(gtao); }
+      if (qn('dof', 1) > 0 && focus) { bokeh = stage.passes.bokeh = new BokehPass(scene, camera, { focus: camera.position.distanceTo(focus), aperture: qn('ap', aperture), maxblur }); composer.addPass(bokeh); }
+      composer.addPass(stage.passes.bloom = new UnrealBloomPass(new THREE.Vector2(W, H), qn('bloom', P.bloom), 0.55, qn('bth', P.bth)));
       composer.addPass(new OutputPass());
       grade = new ShaderPass({ uniforms: { tDiffuse: { value: null }, sat: { value: qn('sat', P.sat ?? 1.12) }, con: { value: qn('con', P.con ?? 0.3) }, vig: { value: qn('vig', P.vig ?? 0.8) } },
         vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
@@ -97,6 +103,7 @@ export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = loca
       composer.addPass(grade); composer.setSize(W, H); return stage; },
     setFocus(point) { if (bokeh) bokeh.uniforms.focus.value = camera.position.distanceTo(point); return stage; },
     render() { composer.render(); return true; },
+    composer: () => composer,
     // für Standbilder: window.renderStill + window.ready setzen
     ready() { window.renderStill = () => stage.render(); window.ready = true; return stage; },
   };

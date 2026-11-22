@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1920px;overflow:hidden}canvas{display:block}</style></head>
+<body><div id="wrap"></div>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }</script>
+<script type="module">
+// Mess-Seite: Kosten der einzelnen Render-Stufen pro Frame (Straßen-Set + 5 Figuren)
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { buildStrasse, SW } from './set_strasse.js';
+import { loadHumanAssets, spawn } from './kit_cast.js';
+const stage = createStage({ preset: 'nacht' }); const { scene, renderer, camera } = stage;
+await buildStrasse(stage, { party: true }); await loadHumanAssets();
+for (const [n, x, z, ry] of [['du', 5.0, 1.0, 0], ['jasmin', 9.3, -1.0, -1], ['leon', 10, 2, -2.4], ['mia', 10.55, 1.15, -0.75], ['tarik', 11.75, 0.55, -1.57]]) scene.add(spawn(n, { x, y: SW, z, ry, anim: 'Idle_Loop' }));
+stage.view({ pos: [1.0, 1.5, 7.0], target: [7.6, 2.0, 1.2], fov: 46 }).build({ focus: new THREE.Vector3(5, 1.6, 1) });
+const P = stage.passes; const comp = stage.composer();
+const time = (label, fn) => { fn(); const t0 = performance.now(); fn(); fn(); const ms = (performance.now() - t0) / 2; console.log('BENCH', label, ms.toFixed(0), 'ms'); return ms; };
+let info = renderer.info; renderer.info.autoReset = true;
+time('full', () => comp.render());
+console.log('BENCH tris main', renderer.info.render.triangles, 'calls', renderer.info.render.calls);
+P.bokeh.enabled = false; time('no-dof', () => comp.render()); P.bokeh.enabled = true;
+P.gtao.enabled = false; time('no-ao', () => comp.render()); P.gtao.enabled = true;
+P.bloom.enabled = false; time('no-bloom', () => comp.render()); P.bloom.enabled = true;
+time('plain render (main+shadows)', () => renderer.render(scene, camera));
+const lights = []; scene.traverse(o => { if (o.isLight) lights.push(o); }); console.log('BENCH lights', lights.filter(l => l.isPointLight).length, 'point', lights.filter(l => l.isSpotLight).length, 'spot', lights.filter(l => l.isDirectionalLight).length, 'dir');
+renderer.shadowMap.autoUpdate = false; time('plain, shadows frozen', () => renderer.render(scene, camera)); renderer.shadowMap.autoUpdate = true;
+lights.filter(l => l.isPointLight).forEach(l => l.visible = false); time('plain, no point lights', () => renderer.render(scene, camera)); lights.forEach(l => l.visible = true);
+console.log('BENCH done'); window.ready = true; window.renderStill = () => true;
+</script></body></html>
