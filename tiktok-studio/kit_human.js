@@ -145,12 +145,17 @@ export function makeHuman(o) {
   { const tp = topClip.map(q => insideExpr(q)).join(' && ');
     const pp = `vBindPos.y < 1.02 && vBindPos.y > 0.105`;
     body.material.userData.uMouthOpen = { value: 0 };
+    // Innenseite des Kopfes dunkel rendern (Sicherheitsnetz: durch den offenen Mund nie „durch den Kopf“ schauen)
+    const headY0 = (FACE_LM[o.sex === 'female' ? 'female' : 'male'].chinY - 0.06).toFixed(4);
+    body.material.side = THREE.DoubleSide; body.material.shadowSide = THREE.BackSide;
     body.material.onBeforeCompile = (sh) => {
       sh.uniforms.uMouthOpen = body.material.userData.uMouthOpen;
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 bindPos;\nattribute vec2 cov;\nattribute float mouthMask;\nvarying float vMouthMask;\nvarying vec3 vBindPos;\nvarying vec2 vCov;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvMouthMask = mouthMask;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvBindPos = bindPos; vCov = cov;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uMouthOpen;\nvarying float vMouthMask;\nvarying vec3 vBindPos;\nvarying vec2 vCov;').replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb *= mix(1.0, 0.1, clamp(vMouthMask * uMouthOpen * 1.8, 0.0, 1.0));').replace('void main() {', `void main() {\nif (vBindPos.y < 0.09) discard;\nif (vCov.x > 0.5 && ${tp}) discard;\nif (vCov.y > 0.5 && ${pp}) discard;`);
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uMouthOpen;\nvarying float vMouthMask;\nvarying vec3 vBindPos;\nvarying vec2 vCov;').replace('#include <map_fragment>', '#include <map_fragment>\n if (vMouthMask > 0.995 && uMouthOpen > 0.015) discard;\n diffuseColor.rgb *= mix(vec3(1.0), vec3(0.45, 0.22, 0.24), clamp(vMouthMask / 0.6, 0.0, 1.0) * clamp(uMouthOpen * 6.0, 0.0, 1.0));')
+        .replace('#include <opaque_fragment>', '#include <opaque_fragment>\n if (!gl_FrontFacing) gl_FragColor = vec4(0.016, 0.004, 0.005, 1.0);')
+        .replace('void main() {', `void main() {\nif (vBindPos.y < 0.09) discard;\nif (!gl_FrontFacing && vBindPos.y < ${headY0}) discard;\nif (vCov.x > 0.5 && ${tp}) discard;\nif (vCov.y > 0.5 && ${pp}) discard;`);
     };
-    body.material.customProgramCacheKey = () => 'body-' + tp; }
+    body.material.customProgramCacheKey = () => 'body-' + headY0 + tp; }
   // ---- rigid accessories on bones ----
   const bonesBy = {}; body.skeleton.bones.forEach(b => bonesBy[b.name] = b);
   root.updateMatrixWorld(true);
@@ -247,23 +252,82 @@ export const EXPRESSIONS = {
 };
 const FACE_LM = { male: { mouthY: 1.6245, cornerX: 0.031, cornerY: 1.6205, frontZ: 0.095, chinY: 1.587 }, female: { mouthY: 1.583, cornerX: 0.030, cornerY: 1.5805, frontZ: 0.097, chinY: 1.548 } };
 const FACE_DONE = new WeakSet();
+const smooth01 = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+const JAW = { dy: 0.015, dz: 0.0035 }; // Unterkiefer-Weg bei jawOpen = 1 (Meter)
+// Lippen-Analyse (einmal pro Kopf-Geometrie). Die UBC-Köpfe haben nach innen gerollte Lippen; ihre tiefsten Reihen sind mit einem
+// schmalen Streifen verbunden, der den Mund schließt. Ergebnis: Naht-Höhe, Tiefe/Breite des Mundes, je Vertex ein Gewicht
+// „gehört zum Unterkiefer“ (Geodäten-Distanz zur unteren vs. oberen Lippenreihe) und eine Maske (1 = Verschluss-Streifen, 0…0,6 = Lippen-Innenseite).
+function lipInfo(geo, L) {
+  if (geo.userData.lipInfo) return geo.userData.lipInfo;
+  const P = geo.attributes.position, n = P.count, X = (i) => P.getX(i), Y = (i) => P.getY(i), Z = (i) => P.getZ(i);
+  let minZ = 1; const reg = [];
+  for (let i = 0; i < n; i++) if (Math.abs(X(i)) < 0.032 && Math.abs(Y(i) - L.mouthY) < 0.006 && Z(i) > 0.04) { reg.push(i); minZ = Math.min(minZ, Z(i)); }
+  const deep = reg.filter(i => Z(i) < minZ + 0.0015);
+  let s0 = 0, s1 = 0, s2 = 0, t0 = 0, t1 = 0; for (const i of deep) { const q = X(i) ** 2, y = Y(i); s0++; s1 += q; s2 += q * q; t0 += y; t1 += q * y; }
+  const det = (s0 * s2 - s1 * s1) || 1e-12, fa = (t0 * s2 - s1 * t1) / det, fb = (s0 * t1 - s1 * t0) / det;
+  const isUp = (i) => Y(i) > fa + fb * X(i) ** 2;
+  const xEnd = Math.max(...deep.map(i => Math.abs(X(i)))), innerZ = deep.reduce((s, i) => s + Z(i), 0) / deep.length;
+  const cu = deep.filter(i => Math.abs(X(i)) < 0.0035 && isUp(i)), cl = deep.filter(i => Math.abs(X(i)) < 0.0035 && !isUp(i));
+  const seamY = cu.length && cl.length ? (Math.min(...cu.map(Y)) + Math.max(...cl.map(Y))) / 2 : fa;
+  // Nachbarschaft rund um den Mund (Vertices mit gleicher Position verschweißt), Verschluss-Kanten oben<->unten entfernt
+  const canon = new Int32Array(n).fill(-1), rep = [], keyOf = new Map();
+  for (let i = 0; i < n; i++) { if (!(Math.abs(X(i)) < 0.08 && Y(i) > L.chinY - 0.08 && Y(i) < L.mouthY + 0.06 && Z(i) > 0)) continue;
+    const k = Math.round(X(i) * 1e5) + ',' + Math.round(Y(i) * 1e5) + ',' + Math.round(Z(i) * 1e5); let c = keyOf.get(k); if (c === undefined) { c = rep.length; keyOf.set(k, c); rep.push(i); } canon[i] = c; }
+  const m = rep.length, adj = Array.from({ length: m }, () => []), up = new Uint8Array(m), lo = new Uint8Array(m);
+  for (const i of deep) (isUp(i) ? up : lo)[canon[i]] = 1;
+  const ix = geo.index ? geo.index.array : null;
+  if (ix) for (let t = 0; t < ix.length; t += 3) for (let e = 0; e < 3; e++) { const a = canon[ix[t + e]], b = canon[ix[t + (e + 1) % 3]]; if (a < 0 || b < 0 || a === b || (up[a] && lo[b]) || (lo[a] && up[b])) continue;
+    const ia = rep[a], ib = rep[b], d = Math.hypot(X(ia) - X(ib), Y(ia) - Y(ib), Z(ia) - Z(ib)); adj[a].push(b, d); adj[b].push(a, d); }
+  // Flutfüllung je Lippe ab ihrer innersten Reihe, nur im Lippenband und ohne die Mundwinkel (dort hängen beide Lippen zusammen)
+  const xIn = xEnd - 0.001, inBand = (c) => { const i = rep[c]; return Math.abs(X(i)) < xIn && Math.abs(Y(i) - seamY) < 0.008 && Z(i) > innerZ - 0.001; };
+  const flood = (seed, block) => { const hit = new Uint8Array(m), st = []; for (let c = 0; c < m; c++) if (seed[c]) { hit[c] = 1; st.push(c); }
+    while (st.length) { const u = st.pop(), A = adj[u]; for (let k = 0; k < A.length; k += 2) { const v = A[k]; if (!hit[v] && !block[v] && inBand(v)) { hit[v] = 1; st.push(v); } } } return hit; };
+  const hU = flood(up, lo), hL = flood(lo, up);
+  const lowerW = new Float32Array(n), mask = new Float32Array(n), zf = (x) => L.frontZ - 0.003 - 20 * x * x;
+  // Lippenlinie vorne (Berührung Ober-/Unterlippe) aus den gefluteten Lippen
+  let upMin = Infinity, loMax = -Infinity; for (let i = 0; i < n; i++) { const c = canon[i]; if (c < 0 || Math.abs(X(i)) > 0.015 || Z(i) < innerZ + 0.012) continue; if (hU[c] && !hL[c]) upMin = Math.min(upMin, Y(i)); if (hL[c] && !hU[c]) loMax = Math.max(loMax, Y(i)); }
+  const lipLine = isFinite(upMin) && isFinite(loMax) ? (upMin + loMax) / 2 : seamY;
+  for (let i = 0; i < n; i++) { const c = canon[i];
+    // Lippen: aus der Flutfüllung; alles andere (Wangen, Kinn, Mundwinkel): weich über/unter der Lippenlinie
+    lowerW[i] = c >= 0 && (hU[c] || hL[c]) ? (hU[c] && hL[c] ? 0.5 : hL[c] ? 1 : 0) : smooth01((lipLine - Y(i)) / 0.004 + 0.5);
+    const ax = Math.abs(X(i)); if (ax < xEnd + 0.002 && Math.abs(Y(i) - seamY) < 0.009 && Z(i) > 0.04) { const t = (zf(ax) - Z(i)) / Math.max(0.004, zf(ax) - innerZ); if (t > 0) mask[i] = 0.6 * Math.min(1, t) ** 1.5; } }
+  for (const i of deep) { mask[i] = 1; lowerW[i] = isUp(i) ? 0 : 1; }
+  // Lippen-Innenseite: Tiefe 0 (Lippenrand) … 1 (innerste Reihe) – für das Abrollen der Unterlippe beim Öffnen
+  const foldT = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const ax = Math.abs(X(i)); if (ax < xEnd && Math.abs(Y(i) - seamY) < 0.007 && Z(i) > innerZ - 0.0005) foldT[i] = Math.max(0, Math.min(1, (zf(ax) - Z(i)) / Math.max(0.004, zf(ax) - innerZ))); }
+  // sichtbare Lippenlinie (wo sich Ober- und Unterlippe vorne berühren) und Tiefe der Lippenvorderkante
+  let zLip = 0; for (let i = 0; i < n; i++) if (Math.abs(X(i)) < 0.004 && Math.abs(Y(i) - lipLine) < 0.0015) zLip = Math.max(zLip, Z(i));
+  return (geo.userData.lipInfo = { seamY, innerZ, xEnd, lowerW, mask, foldT, lipLine, zLip: zLip || L.frontZ - 0.004, rows: deep.length });
+}
+// Zahn-Textur: Schneidezähne in der Mitte breiter, zu den Seiten und zum Zahnfleisch hin dunkler (liegt tiefer im Mund)
+let TEETH_TEX = null;
+function teethTexture() { if (TEETH_TEX) return TEETH_TEX; const c = document.createElement('canvas'); c.width = 512; c.height = 64; const g = c.getContext('2d');
+  g.fillStyle = '#f2ece0'; g.fillRect(0, 0, 512, 64);
+  const eg = g.createLinearGradient(0, 64, 0, 40); eg.addColorStop(0, 'rgba(196,202,214,0.6)'); eg.addColorStop(1, 'rgba(196,202,214,0)'); g.fillStyle = eg; g.fillRect(0, 40, 512, 24);
+  const bounds = [0.5]; for (const d of [0.075, 0.14, 0.2, 0.255, 0.305, 0.35, 0.39, 0.43, 0.465]) bounds.push(0.5 - d, 0.5 + d);
+  for (const u of bounds) { const x = u * 512, lg = g.createLinearGradient(x - 3, 0, x + 3, 0); lg.addColorStop(0, 'rgba(110,85,70,0)'); lg.addColorStop(0.5, 'rgba(110,85,70,0.55)'); lg.addColorStop(1, 'rgba(110,85,70,0)'); g.fillStyle = lg; g.fillRect(x - 3, 0, 6, 64); }
+  const sg = g.createLinearGradient(0, 0, 512, 0); sg.addColorStop(0, 'rgba(30,12,12,0.85)'); sg.addColorStop(0.28, 'rgba(30,12,12,0)'); sg.addColorStop(0.72, 'rgba(30,12,12,0)'); sg.addColorStop(1, 'rgba(30,12,12,0.85)'); g.fillStyle = sg; g.fillRect(0, 0, 512, 64);
+  const tg = g.createLinearGradient(0, 0, 0, 22); tg.addColorStop(0, 'rgba(60,25,25,0.55)'); tg.addColorStop(1, 'rgba(60,25,25,0)'); g.fillStyle = tg; g.fillRect(0, 0, 512, 22);
+  TEETH_TEX = new THREE.CanvasTexture(c); TEETH_TEX.colorSpace = THREE.SRGBColorSpace; TEETH_TEX.anisotropy = 4; return TEETH_TEX; }
 function faceRig(sex, body, eyes, brows) {
   const L = FACE_LM[sex]; const G = (d, r) => Math.exp(-(d / r) * (d / r));
   const morph = (mesh, names, fn) => { if (!mesh) return; const g = mesh.geometry; if (!FACE_DONE.has(g)) { const P = g.attributes.position, n = P.count; const arrs = names.map(() => new Float32Array(n * 3)); const v = new THREE.Vector3();
       for (let i = 0; i < n; i++) { v.fromBufferAttribute(P, i); fn(v, i, (k, dx, dy, dz) => { const a = arrs[k]; a[i * 3] += dx; a[i * 3 + 1] += dy; a[i * 3 + 2] += dz; }); }
       g.morphAttributes.position = arrs.map(a => new THREE.Float32BufferAttribute(a, 3)); g.morphTargetsRelative = true; FACE_DONE.add(g); }
     mesh.morphTargetDictionary = {}; names.forEach((nm, k) => mesh.morphTargetDictionary[nm] = k); mesh.morphTargetInfluences = names.map(() => 0); };
-  // --- face (body mesh): jawOpen, smileL, smileR, frown + mouth mask attribute
-  const BODY = ['jawOpen', 'smileL', 'smileR', 'frown'];
-  if (body && !body.geometry.attributes.mouthMask) { const P = body.geometry.attributes.position; const mm = new Float32Array(P.count); const v = new THREE.Vector3();
-    for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); const yc = L.mouthY + (L.cornerY - L.mouthY) * Math.min(1, (v.x / L.cornerX) ** 2);
-      if (v.z > 0.04 && Math.abs(v.x) < L.cornerX * 1.02 && Math.abs(v.y - yc) < 0.007 && v.z < L.frontZ - 0.005) mm[i] = 1; }
-    body.geometry.setAttribute('mouthMask', new THREE.BufferAttribute(mm, 1)); }
+  // --- face (body mesh): jawOpen, smileL, smileR, frown
+  const BODY = ['jawOpen', 'smileL', 'smileR', 'frown', 'lipRoll']; // lipRoll wird automatisch aus jawOpen gesetzt
+  const LI = body ? lipInfo(body.geometry, L) : null;
+  if (body && !body.geometry.attributes.mouthMask) body.geometry.setAttribute('mouthMask', new THREE.BufferAttribute(LI.mask, 1));
   morph(body, BODY, (v, i, add) => { if (v.z < 0.03 || v.y < L.chinY - 0.06 || v.y > L.mouthY + 0.07) return; const ax = Math.abs(v.x), s = Math.sign(v.x) || 1;
-    const yc = L.mouthY + (L.cornerY - L.mouthY) * Math.min(1, (ax / L.cornerX) ** 2);
-    // jaw / lower lip down
-    if (v.y < yc - 0.0004) { const wx = Math.exp(-((ax / 0.055) ** 4)), wy = Math.min(1, Math.max(0, (v.y - (L.chinY - 0.04)) / 0.03)); add(0, 0, -0.012 * wx * wy, -0.003 * wx * wy); }
-    else if (v.y < yc + 0.013) { const fx = Math.exp(-((ax / (L.cornerX * 1.1)) ** 6)); add(0, 0, 0.0022 * fx * G(v.y - yc, 0.008), 0); }
+    // Unterkiefer: Unterlippe + Kinn nach unten. An den Lippen linsenförmig (Mundwinkel bleiben zu), weiter unten voll.
+    const wl = LI.lowerW[i], lens = Math.max(0, 1 - (ax / (LI.xEnd + 0.001)) ** 2) ** 0.8, below = smooth01((LI.lipLine - v.y - 0.003) / 0.012);
+    const wj = wl * (lens + (1 - lens) * below) * Math.exp(-((ax / 0.055) ** 4)) * Math.min(1, Math.max(0, (v.y - (L.chinY - 0.04)) / 0.03));
+    if (wj > 0) add(0, 0, -JAW.dy * wj, -JAW.dz * wj);
+    // Oberlippe hebt sich ein wenig (zeigt die oberen Zähne)
+    if (wl < 1) { const fx = Math.exp(-((ax / (L.cornerX * 1.1)) ** 6)); add(0, 0, 0.003 * (1 - wl) * fx * G(v.y - LI.seamY, 0.008), 0); }
+    // Unterlippe rollt innen nach unten ab (sonst verdeckt ihre Innenseite die unteren Zähne)
+    if (LI.foldT[i] > 0 && wl > 0) add(4, 0, -0.0025 * LI.foldT[i] * wl, -0.0004 * LI.foldT[i] * wl);
     // smile: corner up/out/back + cheek bulge (per side)
     const d = Math.hypot(ax - L.cornerX, v.y - L.cornerY); const w = G(d, 0.014); const dk = Math.hypot(ax - (L.cornerX + 0.012), v.y - (L.cornerY + 0.02)); const wk = G(dk, 0.018);
     const k = s > 0 ? 1 : 2; add(k, s * 0.0042 * w, 0.0115 * w + 0.0065 * wk, -0.0025 * w + 0.0035 * wk);
@@ -282,10 +346,38 @@ function faceRig(sex, body, eyes, brows) {
   const BROWS = ['browsUp', 'browsInnerUp', 'browsAngry'];
   morph(brows, BROWS, (v, i, add) => { const u = Math.min(1, Math.abs(v.x) / 0.062), s = Math.sign(v.x) || 1;
     add(0, 0, 0.0065, 0.0005); add(1, -s * 0.0012 * (1 - u), 0.011 * Math.pow(1 - u, 1.3), 0); add(2, -s * 0.003 * (1 - u), -0.0085 * Math.pow(1 - u, 1.2) + 0.0025 * u, 0.0018 * (1 - u)); });
+  // --- Zähne, Zunge, Mundraum: am Kopf-Knochen, direkt hinter den eingerollten Lippen.
+  // Unterkiefer-Teile folgen jawOpen (Morph 0) mit derselben Verschiebung wie die Unterlippe.
+  let teeth = null;
+  if (body) { const hi = body.skeleton.bones.findIndex(bn => bn.name === 'Head');
+    const ly = LI.lipLine, zl = LI.zLip, xe = LI.xEnd;
+    const arch = (R, zFront, y0, y1, xw) => { const th = 2 * Math.asin(Math.min(0.99, xw / R)); const g = new THREE.CylinderGeometry(R, R, y1 - y0, 40, 3, true, Math.PI / 2 - th / 2, th); g.rotateY(-Math.PI / 2); g.translate(0, (y0 + y1) / 2, zFront - R); return g; };
+    const parts = []; // [Geometrie, Material, Kiefer-Gewicht(y), Textur spiegeln]
+    parts.push([arch(0.03, zl - 0.0075, ly - 0.0032, ly + 0.0078, xe + 0.001), 0, () => 0, false]); // obere Zahnreihe (knapp hinter der Oberlippe)
+    parts.push([arch(0.028, zl - 0.009, ly - 0.010, ly + 0.0002, xe - 0.001), 3, () => 1, true]);   // untere Zahnreihe (hinter der oberen)
+    const tg = new THREE.SphereGeometry(1, 18, 10); tg.scale(0.0165, 0.0045, 0.018); tg.translate(0, ly - 0.0068, zl - 0.031); parts.push([tg, 1, () => 1, false]); // Zunge
+    const cy = ly + 0.002, cav = new THREE.SphereGeometry(1, 24, 16); cav.scale(xe + 0.0075, 0.015, 0.03); cav.translate(0, cy, zl - 0.034); parts.push([cav, 2, (y) => smooth01((cy - y) / 0.006), false]); // dunkler Mundraum
+    const pos = [], nor = [], uv = [], wj = [], geo = new THREE.BufferGeometry(); let off = 0;
+    for (const [g0, mi, wf, flip] of parts) { const g = g0.index ? g0.toNonIndexed() : g0; const P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv;
+      for (let i = 0; i < P.count; i++) { pos.push(P.getX(i), P.getY(i), P.getZ(i)); nor.push(N.getX(i), N.getY(i), N.getZ(i)); uv.push(U.getX(i), flip ? 1 - U.getY(i) : U.getY(i)); wj.push(wf(P.getY(i))); }
+      geo.addGroup(off, P.count, mi); off += P.count; }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    const n = pos.length / 3, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4); for (let i = 0; i < n; i++) { si[i * 4] = hi; sw[i * 4] = 1; }
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    const md = new Float32Array(n * 3); for (let i = 0; i < n; i++) { md[i * 3 + 1] = -JAW.dy * wj[i]; md[i * 3 + 2] = -JAW.dz * wj[i]; }
+    geo.morphAttributes.position = [new THREE.Float32BufferAttribute(md, 3)]; geo.morphTargetsRelative = true;
+    const tt = teethTexture();
+    teeth = new THREE.SkinnedMesh(geo, [
+      new THREE.MeshStandardMaterial({ color: 0xffffff, map: tt, roughness: 0.42, envMapIntensity: 0.4, side: THREE.DoubleSide }),
+      new THREE.MeshStandardMaterial({ color: 0x9c4a55, roughness: 0.5 }),
+      new THREE.MeshBasicMaterial({ color: 0x1a0608, side: THREE.BackSide }),
+      new THREE.MeshStandardMaterial({ color: 0xd9d2c6, map: tt, roughness: 0.45, envMapIntensity: 0.4, side: THREE.DoubleSide })]);
+    teeth.bind(body.skeleton, body.bindMatrix); teeth.frustumCulled = false; teeth.morphTargetInfluences = [0]; body.parent.add(teeth); teeth.visible = false;
+    if (typeof location !== 'undefined' && location.search.includes('teethdbg')) { teeth.material.forEach(m => { m.color.set(0xff0000); m.map = null; m.depthTest = false; if (m.emissive) m.emissive = new THREE.Color(0x660000); }); teeth.renderOrder = 999; } }
   const meshes = [[body, BODY], [eyes, EYES], [brows, BROWS]];
   const face = {
-    set(vals) { for (const [m, names] of meshes) if (m) names.forEach((nm, k) => { if (nm in vals) m.morphTargetInfluences[k] = vals[nm]; }); if ('jawOpen' in vals && body) body.material.userData.uMouthOpen.value = vals.jawOpen; return face; },
-    reset() { for (const [m, names] of meshes) if (m) m.morphTargetInfluences.fill(0); if (body) body.material.userData.uMouthOpen.value = 0; return face; },
+    set(vals) { for (const [m, names] of meshes) if (m) names.forEach((nm, k) => { if (nm in vals) m.morphTargetInfluences[k] = vals[nm]; }); if ('jawOpen' in vals && body) { body.material.userData.uMouthOpen.value = vals.jawOpen; body.morphTargetInfluences[4] = Math.min(1, vals.jawOpen * 4); if (teeth) { teeth.morphTargetInfluences[0] = vals.jawOpen; teeth.visible = vals.jawOpen > 0.015; } } return face; },
+    reset() { for (const [m, names] of meshes) if (m) m.morphTargetInfluences.fill(0); if (body) body.material.userData.uMouthOpen.value = 0; if (teeth) { teeth.morphTargetInfluences[0] = 0; teeth.visible = false; } return face; },
     expr(name, k = 1, extra = {}) { face.reset(); const e = EXPRESSIONS[name] || {}; const vals = {}; for (const key in e) vals[key] = e[key] * k; face.set({ ...vals, ...extra }); return face; },
   };
   return face;
