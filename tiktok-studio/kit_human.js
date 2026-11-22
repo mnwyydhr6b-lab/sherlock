@@ -73,7 +73,7 @@ function shell(body, test, opts, material, name) {
   for (let i = 0; i < pos.count; i++) { if (!used[i]) continue; v.fromBufferAttribute(pos, i); const o = opts.offset(dom[i], v); pos.setXYZ(i, v.x + nor.getX(i) * o, v.y + nor.getY(i) * o, v.z + nor.getZ(i) * o); }
   for (let i = 0; i < pos.count; i++) { const p = new THREE.Vector3().fromBufferAttribute(src.attributes.position, i); bind[i * 3] = p.x; bind[i * 3 + 1] = p.y; bind[i * 3 + 2] = p.z; }
   geo.setAttribute('bindPos', new THREE.BufferAttribute(bind, 3)); geo.computeVertexNormals(); avgNormals();
-  const mat = material.clone(); mat.side = THREE.DoubleSide; addClip(mat, opts.clip || [], opts.bands || []);
+  const mat = material.clone(); mat.side = THREE.DoubleSide; addClip(mat, opts.clip || [], opts.bands || [], opts.extra || '');
   const m = new THREE.SkinnedMesh(geo, mat); m.name = name; m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
   m.bind(body.skeleton, body.bindMatrix); return m;
 }
@@ -82,15 +82,22 @@ function shell(body, test, opts, material, name) {
 // [px,py,pz,nx,ny,nz] = plane; optional 7th value R limits the cut to a vertical cylinder of radius R around (px,pz)
 function insideExpr(p) { const pl = `dot(vBindPos - vec3(${p[0].toFixed(4)},${p[1].toFixed(4)},${p[2].toFixed(4)}), vec3(${p[3].toFixed(4)},${p[4].toFixed(4)},${p[5].toFixed(4)})) >= 0.0`;
   return p.length > 6 ? `(${pl} || length(vBindPos.xz - vec2(${p[0].toFixed(4)},${p[2].toFixed(4)})) > ${p[6].toFixed(4)})` : `(${pl})`; }
-function addClip(mat, planes, bands = []) {
-  if (!planes.length && !bands.length) return;
+// Stoff-Details im Bindungsraum (Körpermitte vorne = x 0, Front = +z): Reißverschluss, Bauchtasche, Knopfleiste
+const TOP_DETAIL = {
+  jacket: `if (vBindPos.z > 0.0 && vBindPos.y < 1.49) { float ax = abs(vBindPos.x); if (ax < 0.0055) diffuseColor.rgb *= 0.32; else if (ax < 0.017) diffuseColor.rgb *= 0.86; }`,
+  hoodie: `if (vBindPos.z > 0.02 && vBindPos.y > 1.02 && vBindPos.y < 1.175) { float t = (vBindPos.y - 1.02) / 0.155; float hw = mix(0.135, 0.085, t); float ax = abs(vBindPos.x);
+    if (ax < hw) { float e = min(hw - ax, min(vBindPos.y - 1.02, 1.175 - vBindPos.y)); diffuseColor.rgb *= (e < 0.006 ? 0.6 : 0.95); } }`,
+  shirt: `if (vBindPos.z > 0.0 && vBindPos.y < 1.49) { float ax = abs(vBindPos.x); if (ax < 0.004) diffuseColor.rgb *= 0.78; float by = fract(vBindPos.y / 0.075); if (ax < 0.009 && by < 0.12) diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92), 0.85); }`,
+};
+function addClip(mat, planes, bands = [], extra = '') {
+  if (!planes.length && !bands.length && !extra) return;
   mat.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 bindPos;\nvarying vec3 vBindPos;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvBindPos = bindPos;');
     const tests = planes.map(p => `if (!(${insideExpr(p)})) discard;`).join('\n');
     const bandCode = bands.map(b => `{ float dd = dot(vBindPos - vec3(${b[0].toFixed(4)},${b[1].toFixed(4)},${b[2].toFixed(4)}), vec3(${b[3].toFixed(4)},${b[4].toFixed(4)},${b[5].toFixed(4)})); if (dd < ${b[6].toFixed(4)}) { float rib = 0.5 + 0.5 * sin(vBindPos.x * 900.0 + vBindPos.z * 900.0); diffuseColor.rgb *= ${b[7].toFixed(3)} * (0.92 + 0.08 * rib); } }`).join('\n');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vBindPos;').replace('void main() {', 'void main() {\n' + tests).replace('#include <map_fragment>', '#include <map_fragment>\n' + bandCode);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vBindPos;').replace('void main() {', 'void main() {\n' + tests).replace('#include <map_fragment>', '#include <map_fragment>\n' + bandCode + '\n' + extra);
   };
-  mat.customProgramCacheKey = () => JSON.stringify(planes) + JSON.stringify(bands);
+  mat.customProgramCacheKey = () => JSON.stringify(planes) + JSON.stringify(bands) + extra;
 }
 const TOP_B = new Set(['spine_01', 'spine_02', 'spine_03', 'clavicle_l', 'clavicle_r', 'upperarm_l', 'upperarm_r', 'lowerarm_l', 'lowerarm_r']);
 const LEG_B = new Set(['pelvis', 'thigh_l', 'thigh_r', 'calf_l', 'calf_r']);
@@ -119,7 +126,7 @@ export function makeHuman(o) {
   else { topClip.push(armCut(el, wr, 0.9, 'l')); topClip.push(armCut(elR, wrR, 0.9, 'r')); }
   const topMesh = shell(body, (bn, v) => TOP_B.has(bn) || (bn === 'pelvis' && v.y > hemY - 0.03) || bn === 'neck_01' || bn === 'hand_l' || bn === 'hand_r',
     { smooth: 10, offset: (bn, v) => bn.startsWith('lowerarm') ? loose * 0.85 : bn.startsWith('upperarm') ? loose : bn === 'neck_01' ? 0.01 : loose * 1.15,
-      axes: [['upperarm_l', 'lowerarm_l', 0.07, 0.065, 0.5], ['upperarm_r', 'lowerarm_r', 0.07, 0.065, 0.5], ['lowerarm_l', 'hand_l', 0.062, 0.05, 0.5], ['lowerarm_r', 'hand_r', 0.062, 0.05, 0.5], ['pelvis', 'neck_01', 0.17, 0.15, 0.35]], clip: topClip,
+      axes: [['upperarm_l', 'lowerarm_l', 0.07, 0.065, 0.5], ['upperarm_r', 'lowerarm_r', 0.07, 0.065, 0.5], ['lowerarm_l', 'hand_l', 0.062, 0.05, 0.5], ['lowerarm_r', 'hand_r', 0.062, 0.05, 0.5], ['pelvis', 'neck_01', 0.17, 0.15, 0.35]], clip: topClip, extra: TOP_DETAIL[top.type] || '',
       bands: top.type === 'hoodie' ? [[0, hemY, 0, 0, 1, 0, 0.055, 0.86], topClip[2].slice(0, 6).concat([0.05, 0.86]), topClip[3].slice(0, 6).concat([0.05, 0.86])] : [[0, hemY, 0, 0, 1, 0, 0.02, 0.9]] }, topMat, 'top');
   parent.add(topMesh);
   // cuffs + hem bands (rib knit) for hoodies
@@ -159,6 +166,21 @@ export function makeHuman(o) {
   // collar ring at the neckline
   { const nk = bonesBy.neck_01.getWorldPosition(new THREE.Vector3()); const ringMat = topMat.clone(); ringMat.color = topMat.color.clone().multiplyScalar(0.72); const ring = new THREE.Mesh(new THREE.TorusGeometry(top.type === 'tee' ? 0.066 : 0.072, top.type === 'tee' ? 0.01 : 0.017, 10, 32), ringMat); ring.scale.set(1.25, 1.0, 1.0); ring.rotation.x = Math.PI / 2 - 0.25; ring.castShadow = true;
     const hb2 = new THREE.Matrix4().copy(bonesBy.spine_03.matrixWorld).invert(); attach('spine_03', ring, new THREE.Vector3(nk.x, 1.515, nk.z + 0.005)); ring.quaternion.premultiply(new THREE.Quaternion().setFromRotationMatrix(hb2)); }
+  // hood lying on the upper back (roll around the neck + flat pouch), rigid on spine_03
+  if (top.type === 'hoodie' && o.hood !== false) { const PB = body.geometry.attributes.position; const nk = boneRestPos(body, 'neck_01');
+    let backZ = 1; for (let i = 0; i < PB.count; i++) { if (Math.abs(PB.getY(i) - 1.38) < 0.02 && Math.abs(PB.getX(i)) < 0.05) backZ = Math.min(backZ, PB.getZ(i)); }
+    const hoodMat = topMat.clone(); hoodMat.side = THREE.DoubleSide; const rollMat = topMat.clone(); rollMat.color = topMat.color.clone().multiplyScalar(0.85);
+    const g = new THREE.Group();
+    const roll = new THREE.Mesh(new THREE.TorusGeometry(0.098, 0.034, 12, 28, Math.PI * 1.25), rollMat); roll.rotation.set(Math.PI / 2 - 0.55, 0, Math.PI + Math.PI * 0.125); roll.scale.set(1.18, 1.0, 1.0); roll.position.set(nk.x, 1.485, nk.z - 0.005); roll.castShadow = true; g.add(roll);
+    const pouchGeo = new THREE.SphereGeometry(0.125, 24, 16); const pouch = new THREE.Mesh(pouchGeo, hoodMat); pouch.scale.set(0.98, 1.05, 0.34); pouch.position.set(nk.x, 1.335, backZ - loose * 1.15 + 0.004); pouch.rotation.x = -0.52; pouch.castShadow = true; g.add(pouch);
+    g.applyMatrix4(new THREE.Matrix4().copy(bonesBy.spine_03.matrixWorld).invert()); bonesBy.spine_03.add(g); }
+  // hoodie drawstrings (follow the chest surface in bind pose, rigid on spine_03)
+  if (top.type === 'hoodie') { const PB = body.geometry.attributes.position; const cordMat = new THREE.MeshStandardMaterial({ color: o.cordColor ?? 0xf2f2f2, roughness: 0.6 });
+    for (const sx of [-1, 1]) { const pts = [];
+      for (let k = 0; k <= 6; k++) { const y = 1.495 - k * 0.032, x = sx * (0.042 - k * 0.002); let zmax = -1; for (let i = 0; i < PB.count; i++) { if (Math.abs(PB.getY(i) - y) < 0.012 && Math.abs(PB.getX(i) - x) < 0.015) zmax = Math.max(zmax, PB.getZ(i)); } pts.push(new THREE.Vector3(x, y, zmax + loose * 1.15 + 0.012)); }
+      const g = new THREE.Group(); const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.0045, 6), cordMat); tube.castShadow = true; g.add(tube);
+      const ag = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.0055, 0.022, 8), new THREE.MeshStandardMaterial({ color: 0xc8ccd0, metalness: 0.8, roughness: 0.3 })); ag.position.copy(pts[6]).add(new THREE.Vector3(0, -0.012, 0)); g.add(ag);
+      g.applyMatrix4(new THREE.Matrix4().copy(bonesBy.spine_03.matrixWorld).invert()); bonesBy.spine_03.add(g); } }
   // ---- sneakers (rigid, attached to the feet) ----
   for (const sd of ['l', 'r']) {
     const foot = bonesBy['foot_' + sd], ball = bonesBy['ball_' + sd];

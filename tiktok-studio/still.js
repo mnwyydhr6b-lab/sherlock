@@ -1,9 +1,9 @@
-// Usage: node still.js <page.html> <out.png> [scale]
+// Usage: node still.js <page.html> <out.png> [scale] [width] [height]
 const { chromium } = require('playwright');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const [page_, out, scale = '2'] = process.argv.slice(2);
+const [page_, out, scale = '2', vw = '1080', vh = '1920'] = process.argv.slice(2);
 const root = __dirname;
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {
@@ -12,7 +12,7 @@ const server = http.createServer((req, res) => {
 }).listen(0, async () => {
   const port = server.address().port;
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: parseFloat(scale) });
+  const page = await browser.newPage({ viewport: { width: parseInt(vw), height: parseInt(vh) }, deviceScaleFactor: parseFloat(scale) });
   page.setDefaultTimeout(0); page.on('console', m => { if (!m.text().includes('GL Driver')) console.log('PAGE:', m.type(), m.text()); });
   page.on('pageerror', e => console.error('PAGEERR:', e.message));
   const t0 = Date.now();

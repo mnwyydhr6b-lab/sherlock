@@ -69,6 +69,9 @@ function mats() {
   return M;
 }
 
+// Leuchtkraft aller Fenster-Innenräume (Nacht ~1.25, Tag ~0.12)
+export function setWindowGlow(v) { mats().glass.emissiveIntensity = v; }
+
 // ---------------------------------------------------------------- house
 // o: { w, d, floors, fh, plinth, pitch, wall, plinthColor, roof, trim, seed, front:[...], back:[...], left:[...], right:[...], door:{x,w,h,color,open,light}, chimney:[x,z], garage:{w,d,color,doorColor}, velux:[[x,s]...] }
 // opening: { x, y, w, h, sash, tile, shutter, lit }

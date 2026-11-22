@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;background:#0b0e1c;overflow:hidden;font-family:Inter,Arial,sans-serif}
+  #wrap{position:relative;width:1920px;height:1080px;overflow:hidden}
+  canvas{display:block}
+  .lab{position:absolute;transform:translateX(-50%);color:#fff;font-weight:800;font-size:26px;letter-spacing:.5px;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,.6);white-space:nowrap}
+  .lab small{display:block;font-weight:500;font-size:16px;color:#c9d2ff;margin-top:2px}
+  #title{position:absolute;left:56px;top:40px;color:#fff;font-weight:900;font-size:44px;letter-spacing:1px}
+  #title span{display:block;font-weight:500;font-size:20px;color:#ffd84a;margin-top:6px}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="title">BESETZUNG – „Ungeschriebene Regeln“<span>Feste Figuren: immer gleiche Kleidung, Frisur und Hautfarbe</span></div></div>
+<link rel="stylesheet" href="node_modules/@fontsource/inter/800.css"><link rel="stylesheet" href="node_modules/@fontsource/inter/500.css"><link rel="stylesheet" href="node_modules/@fontsource/inter/900.css">
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Charakterbogen: ?mode=cast (alle Figuren) | ?mode=turn&who=du (Ansicht von 4 Seiten)
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { std, cnv, tex } from './kit_world.js';
+import { loadHumanAssets, spawn, CAST } from './kit_cast.js';
+
+const W = 1920, H = 1080;
+const stage = createStage({ preset: 'studio', W, H, shadowExtent: 8 });
+const { scene, Q } = stage; const mode = Q.get('mode') || 'cast';
+// studio floor with soft radial falloff
+{ const c = cnv(512, 512), g = c.getContext('2d'); const gr = g.createRadialGradient(256, 256, 20, 256, 256, 256); gr.addColorStop(0, '#5a6078'); gr.addColorStop(0.55, '#2a2f48'); gr.addColorStop(1, '#0b0e1c'); g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(14, 64), std(0xffffff, 0.85, 0, { map: tex(c) })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); }
+// backdrop
+{ const c = cnv(8, 512), g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 512); gr.addColorStop(0, '#0b0e1c'); gr.addColorStop(0.7, '#1c2240'); gr.addColorStop(1, '#2a2f48'); g.fillStyle = gr; g.fillRect(0, 0, 8, 512);
+  const bd = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 12, 64, 1, true, Math.PI * 0.5, Math.PI), new THREE.MeshBasicMaterial({ map: tex(c), side: THREE.BackSide })); bd.position.y = 6; scene.add(bd); }
+async function main() {
+  await loadHumanAssets();
+  const labels = [];
+  if (mode === 'cast') {
+    const names = ['du', 'ben', 'leon', 'mia', 'jasmin', 'tarik', 'mama', 'papa']; const gap = 0.95; const x0 = -gap * (names.length - 1) / 2;
+    const anims = { du: 'Idle_Loop', ben: 'Idle_Talking_Loop', leon: 'Idle_FoldArms_Loop', mia: 'Idle_Loop', jasmin: 'Idle_Talking_Loop', tarik: 'Idle_FoldArms_Loop', mama: 'Idle_Loop', papa: 'Idle_Loop' };
+    names.forEach((n, i) => { const h = spawn(n, { anim: anims[n], time: 0.4 + i * 0.37, x: x0 + i * gap, y: 0, z: 0, ry: (i - 3.5) * -0.06 }); scene.add(h); labels.push([h, CAST[n].label, CAST[n].role]); });
+    stage.view({ pos: [0, 1.3, 12.2], target: [0, 1.02, 0], fov: 19.5 });
+  } else {
+    const who = Q.get('who') || 'du'; const rys = [0, -0.8, -Math.PI / 2, Math.PI]; const names = ['vorne', 'schräg', 'seitlich', 'hinten'];
+    rys.forEach((ry, i) => { const h = spawn(who, { anim: 'Idle_Loop', time: 0.6, x: -1.65 + i * 1.1, y: 0, z: 0, ry }); scene.add(h); labels.push([h, i === 0 ? CAST[who].label : '&nbsp;', names[i]]); });
+    stage.view({ pos: [0, 1.2, 6.4], target: [0, 0.98, 0], fov: 24 });
+  }
+  stage.aimKey(new THREE.Vector3(0, 0, 0)).build({ focus: null });
+  // labels under the feet
+  scene.updateMatrixWorld(true); stage.camera.updateMatrixWorld(true);
+  for (const [h, txt, sub] of labels) { const p = h.position.clone().add(new THREE.Vector3(0, -0.02, 0.25)).project(stage.camera); const d = document.createElement('div'); d.className = 'lab'; d.innerHTML = (txt || '&nbsp;') + (sub ? `<small>${sub}</small>` : ''); d.style.left = ((p.x + 1) / 2 * W) + 'px'; d.style.top = ((1 - p.y) / 2 * H + 6) + 'px'; document.getElementById('wrap').appendChild(d); }
+  await document.fonts.ready; stage.ready();
+}
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>
