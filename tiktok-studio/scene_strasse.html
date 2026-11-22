@@ -1,0 +1,227 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;background:#000;overflow:hidden}
+  #wrap{position:relative;width:1080px;height:1920px;overflow:hidden}
+  canvas{display:block}
+  .vig{position:absolute;inset:0;pointer-events:none;
+       background:radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%)}
+  .hud{position:absolute;left:64px;top:300px;color:#fff;font-family:"DejaVu Sans",sans-serif;
+       text-shadow:0 2px 8px rgba(0,0,0,.6)}
+  .hud .loc{font-size:34px;font-weight:700;letter-spacing:4px}
+  .hud .lab{font-size:24px;font-weight:700;color:#ff4a4a;letter-spacing:3px;margin-top:6px;text-shadow:0 0 6px #000,0 2px 10px #000}
+  .hud .num{font-size:64px;font-weight:700;margin-top:2px}
+  .band{position:absolute;left:0;right:0;top:1180px;height:190px;
+        background:linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,.55) 35%, rgba(0,0,0,.55) 65%, rgba(0,0,0,0))}
+  .sub{position:absolute;left:0;right:0;top:1250px;text-align:center;color:#fff;
+       font-family:"DejaVu Serif",serif;font-style:italic;font-size:44px;text-shadow:0 2px 10px rgba(0,0,0,.8)}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="vig"></div>
+  <div class="hud"><div class="loc">STRASSE · 22:47</div><div class="lab">SELBSTRESPEKT</div><div class="num" id="num">100 %</div></div>
+  <div class="band"></div>
+  <div class="sub" id="sub">Vielleicht haben sie's vergessen.</div>
+</div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js",
+               "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const W = 1080, H = 1920;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.getElementById('wrap').prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b1230);
+scene.fog = new THREE.FogExp2(0x101a3d, 0.035);
+
+const camera = new THREE.PerspectiveCamera(68, W / H, 0.05, 200);
+
+// ---------- pixel textures ----------
+function pixTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+  t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const brick = (base) => pixTex(32, 32, (g, w, h) => {
+  for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 8) {
+    const off = (y / 4) % 2 ? 4 : 0; const v = 0.85 + rnd() * 0.3;
+    const c = new THREE.Color(base).multiplyScalar(v);
+    g.fillStyle = '#' + c.getHexString(); g.fillRect((x + off) % w, y, 7, 3);
+  }
+});
+const asphalt = pixTex(64, 64, (g, w, h) => {
+  g.fillStyle = '#2a2d36'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 500; i++) { const v = 30 + rnd() * 25 | 0; g.fillStyle = `rgb(${v},${v + 2},${v + 8})`; g.fillRect(rnd() * w | 0, rnd() * h | 0, 1, 1); }
+});
+asphalt.wrapS = asphalt.wrapT = THREE.RepeatWrapping; asphalt.repeat.set(4, 40);
+const face = pixTex(8, 8, (g) => {
+  g.fillStyle = '#c98d5f'; g.fillRect(0, 0, 8, 8);
+  g.fillStyle = '#ffffff'; g.fillRect(1, 3, 2, 1); g.fillRect(5, 3, 2, 1);
+  g.fillStyle = '#1b1b1b'; g.fillRect(2, 3, 1, 1); g.fillRect(5, 3, 1, 1);
+  g.fillStyle = '#7a4a30'; g.fillRect(3, 6, 2, 1);
+});
+
+// ---------- world ----------
+const mat = (o) => new THREE.MeshStandardMaterial(Object.assign({ roughness: 0.85, metalness: 0 }, o));
+const box = (w, h, d, m, x, y, z, cast = true) => {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  b.position.set(x, y, z); b.castShadow = cast; b.receiveShadow = true; scene.add(b); return b;
+};
+box(14, 0.1, 120, mat({ map: asphalt }), 0, -0.05, -50, false);              // street
+box(3, 0.25, 120, mat({ color: 0x5b5f6b }), -4.5, 0.12, -50, false);         // sidewalk left
+box(3, 0.25, 120, mat({ color: 0x5b5f6b }), 4.5, 0.12, -50, false);          // sidewalk right
+// lane marks
+for (let z = 5; z > -110; z -= 6) box(0.18, 0.02, 2.5, mat({ color: 0xd9d2a0, emissive: 0x2a2815 }), 0, 0.01, z, false);
+
+const houseColors = [0x8a3b2e, 0x6f4a3a, 0x9a5a3c, 0x5d3a46, 0x7b3328, 0x8c6a4a];
+const winMat = mat({ color: 0xffd28a, emissive: 0xffa040, emissiveIntensity: 0.75 });
+const winDark = mat({ color: 0x1a2238, emissive: 0x0a1020 });
+for (let side of [-1, 1]) {
+  for (let i = 0; i < 12; i++) {
+    const z = 2 - i * 9, hgt = 6 + (i * 7 % 3) * 1.5, x = side * 9.5;
+    box(6, hgt, 8.6, mat({ map: brick(houseColors[(i + (side > 0 ? 2 : 0)) % 6]) }), x, hgt / 2, z);
+    box(6.4, 0.4, 9, mat({ color: 0x2b2b33 }), x, hgt + 0.2, z);
+    for (let fy = 1.6; fy < hgt - 1; fy += 2.2) for (let fz = -2.8; fz <= 2.8; fz += 2.8) {
+      box(0.1, 1.2, 1.1, ((i * 3 + fy * 5 + fz) | 0) % 3 ? winMat : winDark, x - side * 3.02, fy, z + fz, false);
+    }
+    box(0.1, 2.1, 1.2, mat({ color: 0x3a2618 }), x - side * 3.02, 1.05, z + 3.5, false); // door
+  }
+}
+// street lamps
+const lamps = [];
+for (let z = -4; z > -100; z -= 16) for (let side of [-1, 1]) {
+  const x = side * 3.2;
+  box(0.2, 5, 0.2, mat({ color: 0x23262e }), x, 2.5, z);
+  box(0.9, 0.2, 0.5, mat({ color: 0xfff1c9, emissive: 0xffd27a, emissiveIntensity: 1.4 }), x - side * 0.4, 5, z, false);
+  if (Math.abs(z) < 60) { const L = new THREE.PointLight(0xffc977, 22, 14, 2); L.position.set(x - side * 0.4, 4.7, z); scene.add(L); lamps.push(L); }
+}
+// sidewalk tiles
+const tiles = pixTex(16, 16, (g, w, h) => {
+  g.fillStyle = '#6a6e79'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#585c66'; g.fillRect(0, 7, w, 1); g.fillRect(7, 0, 1, h);
+  for (let i = 0; i < 20; i++) { g.fillStyle = rnd() > .5 ? '#727682' : '#61646e'; g.fillRect(rnd() * w | 0, rnd() * h | 0, 1, 1); }
+});
+tiles.wrapS = tiles.wrapT = THREE.RepeatWrapping; tiles.repeat.set(2, 80);
+for (const sx of [-4.5, 4.5]) box(3, 0.26, 120, mat({ map: tiles }), sx, 0.12, -50, false);
+// curbs
+for (const sx of [-3, 3]) box(0.25, 0.3, 120, mat({ color: 0x8a8d96 }), sx, 0.14, -50, false);
+
+// parked blocky cars
+function car(color, x, z, rotY = 0) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.7, 4), mat({ color, roughness: 0.4, metalness: 0.3 }));
+  body.position.y = 0.6; body.castShadow = true; g.add(body);
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 2.1), mat({ color: 0x1b2433, roughness: 0.2, metalness: 0.6 }));
+  cab.position.set(0, 1.2, -0.2); cab.castShadow = true; g.add(cab);
+  for (const wx of [-0.85, 0.85]) for (const wz of [-1.3, 1.3]) {
+    const wh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.55, 0.55), mat({ color: 0x111111 })); wh.position.set(wx, 0.28, wz); g.add(wh);
+  }
+  g.position.set(x, 0, z); g.rotation.y = rotY; scene.add(g); return g;
+}
+car(0x8f1d1d, 2.1, -1); car(0x2d4f8a, 2.1, -27); car(0xd8d8d8, -2.1, -6, Math.PI); car(0x1f6b45, -2.1, -34, Math.PI);
+
+// blocky trees
+for (let z = -8; z > -90; z -= 14) for (const sx of [-5.2, 5.2]) {
+  box(0.3, 2.2, 0.3, mat({ color: 0x4a3322 }), sx, 1.1, z + (sx > 0 ? 3 : 0));
+  box(1.6, 1.4, 1.6, mat({ color: 0x2f6b3c }), sx, 2.8, z + (sx > 0 ? 3 : 0));
+  box(1.1, 0.8, 1.1, mat({ color: 0x3a7d48 }), sx, 3.8, z + (sx > 0 ? 3 : 0));
+}
+
+// party house (left side, z ~ -25): flashing coloured windows + open door glow
+const partyWin = mat({ color: 0xff5ad8, emissive: 0xff2fd0, emissiveIntensity: 1.2 });
+for (let fy = 1.6; fy < 6; fy += 2.2) for (let fz = -2.8; fz <= 2.8; fz += 2.8) box(0.12, 1.2, 1.1, partyWin, -6.45, fy, -25 + fz, false);
+box(0.12, 2.1, 1.2, mat({ color: 0xffe2a8, emissive: 0xffc070, emissiveIntensity: 1.3 }), -6.45, 1.05, -21.5, false);
+const party = new THREE.PointLight(0xff2fd0, 90, 22, 2); party.position.set(-4.6, 2.2, -23); scene.add(party);
+const party2 = new THREE.PointLight(0x3f7bff, 60, 18, 2); party2.position.set(-5.2, 4.5, -27); scene.add(party2);
+
+// moving car with headlights
+const mover = car(0xc9a227, -1.6, -70, 0);
+const headMat = mat({ color: 0xffffff, emissive: 0xfff3d0, emissiveIntensity: 2.5 });
+for (const hx of [-0.6, 0.6]) { const hl = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.05), headMat); hl.position.set(hx, 0.7, 2.01); mover.add(hl); }
+const beam = new THREE.SpotLight(0xfff0c8, 120, 30, 0.5, 0.6, 1.5); beam.position.set(0, 0.8, 2); mover.add(beam);
+beam.target.position.set(0, 0, 12); mover.add(beam.target);
+
+// moonlight + ambient
+const hemi = new THREE.HemisphereLight(0x4a64b8, 0x0d0f18, 0.7); scene.add(hemi);
+const moon = new THREE.DirectionalLight(0x9db4ff, 0.9);
+moon.position.set(-20, 30, 10); moon.castShadow = true;
+moon.shadow.mapSize.set(2048, 2048);
+Object.assign(moon.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 120 });
+scene.add(moon); scene.add(moon.target); moon.target.position.set(0, 0, -30);
+
+// blocky person
+function person(shirt, pants) {
+  const g = new THREE.Group();
+  const skin = mat({ color: 0xc98d5f });
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), [skin, skin, skin, skin, mat({ map: face }), skin]);
+  head.position.y = 1.65; head.castShadow = true; g.add(head);
+  const hair = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.14, 0.52), mat({ color: 0x2a1a10 })); hair.position.y = 1.93; g.add(hair);
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), mat({ color: shirt })); torso.position.y = 1.05; torso.castShadow = true; g.add(torso);
+  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.22), mat({ color: shirt })); armL.position.set(-0.41, 1.05, 0); g.add(armL);
+  const armR = armL.clone(); armR.position.x = 0.41; g.add(armR);
+  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.7, 0.27), mat({ color: pants })); legL.position.set(-0.15, 0.35, 0); g.add(legL);
+  const legR = legL.clone(); legR.position.x = 0.15; g.add(legR);
+  g.userData = { head, armL, armR, legL, legR };
+  scene.add(g); return g;
+}
+const p1 = person(0xe0e0e0, 0x2b3a67); p1.position.set(-4.4, 0.25, -21); p1.rotation.y = Math.PI / 2.4;
+const p2 = person(0xf2c230, 0x1f1f1f); p2.position.set(-5.2, 0.25, -20.2); p2.rotation.y = Math.PI / 1.7;
+const p3 = person(0x7c4dff, 0x3a3a3a); p3.position.set(4.8, 0.25, -40); p3.rotation.y = -Math.PI / 2;
+
+// ---------- post ----------
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(W / 2, H / 2), 0.32, 0.35, 0.92));
+composer.addPass(new OutputPass());
+
+// ---------- frame function (deterministic) ----------
+window.renderFrame = (t) => {
+  const z = 4 - t * 1.6;                       // walking speed
+  const bob = Math.sin(t * 2 * Math.PI * 1.8) * 0.045;
+  const sway = Math.sin(t * Math.PI * 1.8) * 0.03;
+  camera.position.set(4.3 + sway, 1.72 + bob, z);
+  // head slowly turns left towards the party house near the end
+  const turn = Math.min(1, Math.max(0, (t - 4.5) / 2.5)); const e = turn * turn * (3 - 2 * turn);
+  const fx = 3.6 + Math.sin(t * 0.7) * 0.25, fz = z - 10; camera.lookAt(fx + (-6.5 - fx) * e * 0.85, 1.6 + bob * 0.5 + e * 0.4, fz + (-25 - fz) * e * 0.85);
+  camera.rotation.z += Math.sin(t * Math.PI * 1.8) * 0.006;
+  mover.position.z = -70 + t * 9;
+  document.getElementById('sub').textContent = t < 4 ? "Vielleicht haben sie's vergessen." : 'Die Musik wird lauter.';
+  document.getElementById('sub').style.opacity = String(Math.min(1, Math.abs(t - 4) * 3));
+  partyWin.emissiveIntensity = 0.7 + 0.8 * Math.max(0, Math.sin(t * 7.5));
+  // idle people
+  for (const [i, p] of [p1, p2, p3].entries()) {
+    const u = p.userData, k = t * 3 + i;
+    u.head.rotation.y = Math.sin(k * 0.6) * 0.25;
+    u.armR.rotation.x = Math.sin(k) * 0.35; u.armL.rotation.x = -Math.sin(k * 0.8) * 0.2;
+    p.position.y = 0.25 + Math.abs(Math.sin(k * 1.4)) * 0.03;
+  }
+  party.intensity = 40 + 30 * Math.max(0, Math.sin(t * 7.5));
+  party2.intensity = 40 + 30 * Math.max(0, Math.cos(t * 6.1));
+  for (const [i, L] of lamps.entries()) L.intensity = 20 + (i === 3 ? Math.random() * 10 : 0);
+  composer.render();
+  return true;
+};
+window.ready = true;
+</script>
+</body>
+</html>
