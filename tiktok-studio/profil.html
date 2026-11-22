@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1080px;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Profilbild (quadratisch 1080x1080): ?v=arms (verschränkte Arme, Blick in die Kamera) | ?v=phone (Handy-Licht im Gesicht) | ?v=psst (experimentell)
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { cnv, tex, makeRng } from './kit_world.js';
+import { loadHumanAssets, spawn, posePhone, lookAt } from './kit_cast.js';
+import { armIK, rotBoneWorld } from './kit_human.js';
+
+const W = 1080, H = 1080;
+const stage = createStage({ preset: 'studio', W, H, shadowExtent: 3 });
+const { scene, qn, Q } = stage; const v = Q.get('v') || 'arms';
+stage.keyLight.intensity *= 0.25; if (stage.rimLight) stage.rimLight.intensity *= 0.3; stage.hemi.intensity *= 0.5;
+// backdrop: dark night with soft party bokeh (pink / gold / violet), brighter upper right
+{ const S = 1024, c = cnv(S, S), g = c.getContext('2d'); const r = makeRng(Q.has('seed') ? +Q.get('seed') : 3);
+  const bg = g.createRadialGradient(S * 0.6, S * 0.4, 50, S * 0.5, S * 0.5, S * 0.75); bg.addColorStop(0, '#1b1840'); bg.addColorStop(0.6, '#0b0c1e'); bg.addColorStop(1, '#040409'); g.fillStyle = bg; g.fillRect(0, 0, S, S);
+  const cols = ['255,90,200', '255,200,110', '170,110,255', '255,140,170', '120,170,255'];
+  for (let i = 0; i < 34; i++) { const x = S * (0.15 + r() * 0.85), y = S * (0.05 + r() * 0.75), rad = 20 + r() * 70, col = cols[i % cols.length], a = 0.12 + r() * 0.3;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${col},${a})`); gr.addColorStop(0.7, `rgba(${col},${a * 0.8})`); gr.addColorStop(1, `rgba(${col},0)`); g.fillStyle = gr; g.beginPath(); g.arc(x, y, rad, 0, 6.28); g.fill(); }
+  const t = tex(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  const bd = new THREE.Mesh(new THREE.PlaneGeometry(7, 7), new THREE.MeshBasicMaterial({ map: t, toneMapped: false, fog: false })); bd.position.set(0.3, 1.6, -3.2); scene.add(bd); }
+// spot helper
+const spot = (col, I, p, tgt, ang = 0.5, pen = 0.8, shadow = false) => { const s = new THREE.SpotLight(col, I, 8, ang, pen, 1.5); s.position.set(...p); s.target.position.set(...tgt); s.castShadow = shadow; if (shadow) { s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -0.0002; } scene.add(s, s.target); return s; };
+
+async function main() {
+  await loadHumanAssets();
+  const du = spawn('du', { anim: v === 'arms' ? 'Idle_FoldArms_Loop' : 'Idle_Loop', time: qn('t', 1.0), x: 0, y: 0, z: 0, ry: qn('ry', v === 'psst' ? 0.18 : v === 'arms' ? 0.28 : -0.35) }); scene.add(du);
+  const b = du.userData.bones; du.updateMatrixWorld(true);
+  const head = () => b.Head.getWorldPosition(new THREE.Vector3());
+  const camPos = new THREE.Vector3(qn('cx', 0.12), qn('cy', 1.62), qn('cz', 1.35));
+  if (Q.has('nocords')) du.traverse(o => { if (o.isMesh && o.geometry && (o.geometry.type === 'TubeGeometry' || (o.geometry.type === 'CylinderGeometry' && o.geometry.parameters.radiusTop < 0.007))) o.visible = false; });
+  if (v === 'arms') { lookAt(du, camPos, qn('look', 0.85)); rotBoneWorld(du, b.Head, new THREE.Vector3(Math.sin(du.rotation.y), 0, Math.cos(du.rotation.y)), qn('tilt', 0.08)); }
+  else if (v === 'psst') {
+    const ry = du.rotation.y, f = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)), rt = new THREE.Vector3(-Math.cos(ry), 0, Math.sin(ry)), up = new THREE.Vector3(0, 1, 0);
+    lookAt(du, camPos, 0.9);
+    const hp = head(); const wrist = hp.clone().addScaledVector(up, qn('wu', -0.12)).addScaledVector(f, qn('wf', 0.17)).addScaledVector(rt, qn('wr', 0.03));
+    armIK(du, 'r', wrist, new THREE.Vector3(0, -1, 0).addScaledVector(rt, 0.9).addScaledVector(f, -0.15));
+    // orient the hand by a full basis: finger direction up, palm facing the face midline
+    du.updateMatrixWorld(true);
+    { const hb = b.hand_r; const W = (bn) => bn.getWorldPosition(new THREE.Vector3());
+      const d = W(b.index_01_r).sub(W(hb)).normalize(), k = W(b.pinky_01_r).sub(W(b.index_01_r)).normalize(); const p = d.clone().cross(k).normalize();
+      const x1 = d, y1 = p.clone().sub(d.clone().multiplyScalar(p.dot(d))).normalize(), z1 = x1.clone().cross(y1);
+      const x2 = up.clone().addScaledVector(f, qn('hf', -0.12)).normalize(); const pw = rt.clone().multiplyScalar(-1).addScaledVector(f, qn('pf', -0.35)).normalize();
+      const y2 = pw.clone().sub(x2.clone().multiplyScalar(pw.dot(x2))).normalize(), z2 = x2.clone().cross(y2);
+      const B1 = new THREE.Matrix4().makeBasis(x1, y1, z1), B2 = new THREE.Matrix4().makeBasis(x2, y2, z2); const R = B2.multiply(B1.transpose());
+      const q = new THREE.Quaternion().setFromRotationMatrix(R); const pq = hb.parent.getWorldQuaternion(new THREE.Quaternion()), bq = hb.getWorldQuaternion(new THREE.Quaternion()); hb.quaternion.copy(pq.invert().multiply(q.multiply(bq))); du.updateMatrixWorld(true); }
+    // fingers: index straight, others curled into a fist
+    du.updateMatrixWorld(true);
+    const knuckle = b.pinky_01_r.getWorldPosition(new THREE.Vector3()).sub(b.index_01_r.getWorldPosition(new THREE.Vector3())).normalize();
+    const sgn = qn('csign', 1);
+    const curl = (name, a) => { for (const k of ['01', '02', '03']) { const bn = b[`${name}_${k}_r`]; if (bn) rotBoneWorld(du, bn, knuckle, a * sgn); } };
+    curl('index', qn('ci', -0.35)); curl('middle', qn('cm', 1.25)); curl('ring', qn('cr', 1.3)); curl('pinky', qn('cp', 1.35)); curl('thumb', qn('ct', 0.5));
+  } else {
+    posePhone(du, { forward: 0.26, height: -0.02, neck: 0.18, head: 0.3, light: 0.1, screenColor: 0xffd0f0 });
+  }
+  du.updateMatrixWorld(true);
+  const hp = head();
+  // lights: warm key front-left, pink/violet rim from behind-right, cool fill
+  spot(0xffd8b0, qn('keyI', 18), [-1.1, 2.4, 1.8], [hp.x, hp.y, hp.z], 0.45, 0.9, true);
+  spot(0xff5ad0, qn('rimI', 40), [1.2, 2.2, -1.4], [hp.x, hp.y - 0.1, hp.z], 0.5, 0.7);
+  spot(0x8a7aff, qn('rim2I', 18), [-1.3, 1.9, -1.2], [hp.x, hp.y - 0.15, hp.z], 0.5, 0.7);
+  spot(0x9ab0ff, qn('fillI', 4), [1.4, 1.5, 1.6], [hp.x, hp.y - 0.1, hp.z], 0.6, 0.9);
+  const tgt = hp.clone().add(new THREE.Vector3(0, qn('toff', -0.06), 0));
+  stage.view({ pos: camPos.toArray(), target: tgt.toArray(), fov: qn('fov', 30) }).build({ focus: hp.clone().add(new THREE.Vector3(0, 0.05, 0.1)), aperture: qn('ap', 0.0016), maxblur: 0.008 }).ready();
+}
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>
