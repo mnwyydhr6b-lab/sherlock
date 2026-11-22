@@ -205,8 +205,8 @@
 - [x] Länge der Folgen: 50 s bis 10k, danach 61–70 s
 - [x] Account: bestehender Account wird weitergenutzt
 - [ ] Kanal-Auftritt: Anzeigename, Bio, Profilbild im Spielwelt-Look; alte, unpassende Videos auf „Nur ich“ stellen (Nutzer entscheidet)
-- [~] Folgenliste: 30 Regeln, nach Viral-Potenzial sortiert → `folgenliste.md` (Entwurf 1, Feedback vom Nutzer offen)
-- [ ] Skripte für die ersten 7–10 Folgen (Hook, Ablauf, Sätze, Zähler-Stufen, Endfrage)
+- [x] Folgenliste → `folgenliste.md`. Der Nutzer hat **1, 3, 4, 9 und 10** als Start-Folgen gewählt (⭐).
+- [~] Skripte: Entwurf Folge 1 (50 s) in `skripte/folge01_regel1.md`. **Hook und Aufbau will der Nutzer pro Folge gemeinsam festlegen**, deshalb ist der Entwurf nicht final.
 - [ ] Serien-Bibel: Hauptfigur, wiederkehrende Figuren, Orte, Stimmen, Musik, Ende-Karte
 - [ ] Posting-Plan: Uhrzeiten, Captions, Hashtags, Titelbilder, KI-Kennzeichnung
 - [x] Animations-System für die Spielwelt (`kit_anim.js`, `kit_hud.js`) und Testclip `clip_test.mp4`
@@ -217,7 +217,37 @@
 
 ## 7. Nächste Schritte
 
-Wird beim Abschluss der Vorbereitung ausgefüllt.
+**Plan des Nutzers:** bis Samstag, 28.11.2026, jeden Tag **eine Folge drehen**, damit der Look sitzt und ein Vorrat entsteht. Gepostet wird ab ca. 29.11.
+
+| Tag | Folge | Drehorte | Neu zu bauen |
+|---|---|---|---|
+| Mo 23.11. | ⭐ 1 – Nicht eingeladen → nicht hingehen | Jugendzimmer, Straße, Partyhaus innen | **Party-Wohnzimmer**, Handy-Story-Einblendung |
+| Di 24.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen | Straße nachts (`party: false`), Fußweg | ggf. dunkler Fußweg/Park |
+| Mi 25.11. | ⭐ 4 – Wer mit dir lästert, lästert auch über dich | Schulhof (Tag) | ggf. Ecke/Flur zum Belauschen |
+| Do 26.11. | ⭐ 9 – Steh nicht daneben | Bushaltestelle, Bus | **Bus innen** |
+| Fr 27.11. | ⭐ 10 – Lach nicht mit, wenn über dich gelacht wird | Schulhof (Tag) | – |
+| Sa 28.11. | Puffer: Nacharbeiten oder eine weitere Folge | – | – |
+
+**Ablauf pro Folge**
+1. **Mit dem Nutzer** Hook und Aufbau festlegen. Kurz vorschlagen, Nutzer entscheidet.
+   - Rahmen: 50 s, Zähler „Selbstrespekt“, Endkarte „Was wäre, wenn …?“ und gelbe Frage
+2. Fehlende Drehorte mit den Baukästen bauen. Referenzbild nach `look/` legen und in der Look-Bibel eintragen.
+3. Szene als `folgeNN.html` nach dem Muster von `clip_test.html` anlegen:
+   - Figuren über `Actor`, Kamera über `cameraAt`
+   - Overlay über `kit_hud`
+4. Testbilder an markanten Zeitpunkten rendern, ansehen und Feedback holen.
+5. Video rendern (24 fps, ca. 2 h im Hintergrund).
+6. Stimmen und Geräusche mit ElevenLabs erzeugen und mischen (wie in `make_clip_test.sh`).
+   - Lautheit auf −16 LUFS
+   - Datei `folgeNN.mp4` committen und dem Nutzer schicken
+
+**Noch offen** (kann parallel laufen)
+- Kanal-Auftritt: Anzeigename, Bio, Profilbild im Spielwelt-Look
+- Posting-Plan:
+  - Uhrzeiten, Captions, Hashtags
+  - einheitliche Titelbilder „Regel Nr. X“
+  - KI-Kennzeichnung (KI-Stimmen) in TikTok prüfen
+- Handy-Chat-Einblendung (für Folgen mit Chats)
 
 ## 8. So startet der neue Chat
 

@@ -1,4 +1,7 @@
-# Folgenliste – „Ungeschriebene Regeln“ (Entwurf 1, 22.11.2026)
+# Folgenliste – „Ungeschriebene Regeln“ (Stand 22.11.2026)
+
+> **Auswahl des Nutzers (22.11.):** Die Folgen **1, 3, 4, 9 und 10** sind stark und bilden den Start. Alle anderen sind Vorrat.
+> Plan: bis Samstag (28.11.) eine Folge pro Tag drehen. Hook und Aufbau legt der Nutzer pro Folge mit fest.
 
 Jede Folge ist 50 Sekunden lang.
 
@@ -27,7 +30,7 @@ Ein Set einmal bauen und dann immer wieder nutzen – so bleibt tägliches Poste
 
 ## Start-Reihenfolge (die ersten 10 Folgen)
 
-**1. Wenn du nicht eingeladen bist, geh nicht hin.**
+**⭐ 1. Wenn du nicht eingeladen bist, geh nicht hin.**
 - Was passiert: Leons Story zeigt eine Party. Du gehst trotzdem hin, drängst dich rein, und die Stimmung kippt.
 - Endfrage: „Wärst du trotzdem hingegangen?“
 - Set: Straße/Partyhaus ✅ | Potenzial: ★★★★★
@@ -37,12 +40,12 @@ Ein Set einmal bauen und dann immer wieder nutzen – so bleibt tägliches Poste
 - Endfrage: „Hättest du nochmal geschrieben?“
 - Set: Jugendzimmer + Chat | Potenzial: ★★★★★
 
-**3. Lass niemanden allein nach Hause gehen.**
+**⭐ 3. Lass niemanden allein nach Hause gehen.**
 - Was passiert: Nach der Party will sie allein los. „Wird schon gehen.“ Eine leere Straße, Schritte hinter ihr … Spannung pur, am Ende kommt sie gut an. Ihre letzte Nachricht: „Du hättest wenigstens fragen können.“
 - Endfrage: „Hättest du sie begleitet?“
 - Set: Straße ✅ | Potenzial: ★★★★★
 
-**4. Wer mit dir über andere lästert, lästert auch über dich.**
+**⭐ 4. Wer mit dir über andere lästert, lästert auch über dich.**
 - Was passiert: Dein bester Freund lästert über Tim, und du lachst mit. Später hörst du ihn hinter der Ecke über dich reden.
 - Endfrage: „Hättest du ihn darauf angesprochen?“
 - Set: Schulhof | Potenzial: ★★★★★
@@ -67,12 +70,12 @@ Ein Set einmal bauen und dann immer wieder nutzen – so bleibt tägliches Poste
 - Endfrage: „Hättest du abgeschickt?“
 - Set: Jugendzimmer + Chat | Potenzial: ★★★★★
 
-**9. Steh nicht daneben, wenn jemand fertiggemacht wird.**
+**⭐ 9. Steh nicht daneben, wenn jemand fertiggemacht wird.**
 - Was passiert: Im Bus wird einer gemobbt, alle filmen, und du schaust weg. Am nächsten Tag ist sein Platz leer.
 - Endfrage: „Hättest du was gesagt?“
 - Set: Bushaltestelle/Bus | Potenzial: ★★★★★
 
-**10. Lach nicht mit, wenn über dich gelacht wird.**
+**⭐ 10. Lach nicht mit, wenn über dich gelacht wird.**
 - Was passiert: Die Gruppe macht Witze über dich, und du lachst mit. Bei jedem Lacher fällt der Zähler.
 - Endfrage: „Hättest du mitgelacht?“
 - Set: Schulhof | Potenzial: ★★★★☆
