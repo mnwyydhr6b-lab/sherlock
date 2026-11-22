@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1920px;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Testclip (7,5 s): Du läuft den Lindenweg entlang zur Party, bleibt am Tor stehen. Gäste tanzen, Ballons wehen, Kamera fährt mit.
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { buildStrasse, SW } from './set_strasse.js';
+import { loadHumanAssets, spawn, holdCup } from './kit_cast.js';
+import { Actor, clipSpeed, keys, smooth, cameraAt } from './kit_anim.js';
+import { createHUD, counterAt } from './kit_hud.js';
+import { rotBoneWorld } from './kit_human.js';
+
+const stage = createStage({ preset: 'nacht' });
+const { scene } = stage;
+async function main() {
+  const S = await buildStrasse(stage, { party: true });
+  await loadHumanAssets();
+  const du = spawn('du', { anim: 'Walk_Loop', x: 5.0, y: SW, z: -2.6, ry: 0 }); scene.add(du);
+  const v = clipSpeed(du, 'Walk_Loop'); console.log('walk speed', v.toFixed(3));
+  const WS = 1.2; const z0 = -2.6, z1 = 3.15, tWalk = (z1 - z0) / (v * WS); const tStop = tWalk; console.log('stop at', tStop.toFixed(2));
+  const actors = [
+    new Actor(du, { segs: [{ anim: 'Walk_Loop', at: 0, speed: WS }, { anim: 'Idle_Loop', at: tStop - 0.15, fade: 0.5 }], path: [[0, 5.0, z0], [tWalk, 5.05, z1]], ry: [[0, 0], [tStop - 0.1, 0], [tStop + 0.9, 1.35]],
+      after: (t, h) => { const k = smooth((t - tStop - 0.4) / 0.8); if (k > 0) { const b = h.userData.bones; rotBoneWorld(h, b.Head, new THREE.Vector3(0, 1, 0), 0.25 * k); } } }),
+    new Actor(spawn('jasmin', { x: 9.3, y: SW, z: -1.0, ry: -1.0 }), { segs: [{ anim: 'Dance_Loop', at: 0, offset: 1.3 }] }),
+    new Actor(spawn('leon', { x: 10.0, y: SW, z: 2.0, ry: -2.4 }), { segs: [{ anim: 'Idle_Talking_Loop', at: 0, offset: 2.0 }] }),
+    new Actor(spawn('mia', { x: 10.55, y: SW, z: 1.15, ry: -0.75 }), { segs: [{ anim: 'Idle_Loop', at: 0, offset: 0.7 }] }),
+    new Actor(spawn('tarik', { x: 11.75, y: SW + 0.45, z: 0.55, ry: -1.57 }), { segs: [{ anim: 'Dance_Loop', at: 0, offset: 0.4 }] }),
+  ];
+  actors.slice(1).forEach(a => scene.add(a.h)); holdCup(actors[2].h, 'r');
+  const hud = await createHUD(); hud.loc('LINDENWEG · 22:47');
+  const cam = { pos: [[0, [0.6, 1.55, 10.2]], [8.0, [1.0, 1.5, 6.4]]], target: [[0, [5.4, 1.5, -0.5]], [tStop, [6.4, 1.9, 1.9]], [8.0, [8.2, 2.3, 1.1]]], fov: [[0, 44], [8.0, 46]] };
+  stage.build({ focus: new THREE.Vector3(5, 1.6, 0) });
+  window.renderFrame = (t) => {
+    for (const a of actors) a.update(t);
+    S.swayAt(t);
+    cameraAt(stage, t, cam);
+    stage.setFocus(du.userData.bones.Head.getWorldPosition(new THREE.Vector3()));
+    const c = counterAt(t, [[0, 100], [tStop + 1.0, 85]]); hud.counter(c.v, c.fl);
+    const so = Math.min(smooth((t - 3.9) / 0.3), 1 - smooth((t - 6.4) / 0.3)); hud.sub('Vielleicht haben sie’s vergessen.', so);
+    hud.hud(smooth(t / 0.4));
+    stage.render();
+  };
+  window.renderStill = () => { window.renderFrame(parseFloat(new URLSearchParams(location.search).get('t') || '3')); return true; };
+  window.ready = true;
+}
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>

@@ -24,7 +24,7 @@ export const ANCHOR = {
 
 export async function buildStrasse(stage, o = {}) {
   const { scene, qn } = stage; const party = o.party ?? true; const day = stage.P.sky?.[0]?.[1] === '#3f7fd8';
-  const rnd = makeRng(99);
+  const rnd = makeRng(99); const sway = [];
   setWindowGlow(day ? 0.12 : 1.25);
   // ---------------- ground
   const asph = triMat({ map: T.asphalt.map, bump: T.asphalt.bump, scale: 0.25, color: 0xb8bcc8, roughness: 0.82, bumpScale: 0.6 });
@@ -95,7 +95,7 @@ export async function buildStrasse(stage, o = {}) {
     const mb = makeMailbox(); mb.rotation.y = -Math.PI / 2; mb.position.set(P.fenceX - 0.22, SW + 0.75, 3.65); scene.add(mb);
     if (party) { const sign = makeCardboardSign(['PARTY', '→ :)']); sign.rotation.y = -Math.PI / 2; sign.position.set(P.fenceX - 0.215, SW + 0.62, 2.35); sign.rotation.z = 0.06; scene.add(sign); } }
   for (const [x, z, r] of [[11.9, -3.6, 0.42], [11.9, -1.6, 0.36], [11.9, 2.2, 0.4], [11.9, 4.2, 0.45], [7.0, 7.6, 0.5], [7.0, -3.9, 0.45]]) { const s = makeShrub(r, { seed: Math.round(x * 10 + z * 7) }); s.position.set(x, SW, z); scene.add(s); }
-  const maple = makeTree({ h: 4.4, crown: 1.6, seed: 17, palette: [0xb02a1e, 0xd2421f, 0x8e1c1a, 0xe0632a], trunk: 0x3a2c24, clumps: 160 }); maple.position.set(10.0, SW, -6.2); scene.add(maple);
+  const maple = makeTree({ h: 4.4, crown: 1.6, seed: 17, palette: [0xb02a1e, 0xd2421f, 0x8e1c1a, 0xe0632a], trunk: 0x3a2c24, clumps: 330, clumpScale: 0.62 }); maple.position.set(10.0, SW, -6.2); scene.add(maple);
   { const gr = makeGrass(5.6, 13.5, 5200, { seed: 21, skip: (x, z) => { const wx = 9.4 + x, wz = 1.4 + z; return (wx > 10.3 && Math.abs(wz - 0.4) < 1.2) || (wx > 7.5 && wx < 10.8 && Math.abs(wz - (3.0 - (wx - 6.4) * 0.55)) < 0.45); } }); gr.position.set(9.4, SW, 1.4); scene.add(gr); }
 
   // ---------------- street furniture
@@ -106,9 +106,9 @@ export async function buildStrasse(stage, o = {}) {
   if (lampLights[0]) { lampLights[0].castShadow = true; lampLights[0].shadow.mapSize.set(2048, 2048); lampLights[0].shadow.bias = -0.0002; lampLights[0].shadow.normalBias = 0.02; }
   for (const [x, z, seed, pal] of [[4.35, 14.5, 31, 0], [4.35, -9.5, 32, 1], [4.35, -29, 33, 0], [-4.35, 8, 34, 1], [-4.35, -12, 35, 0], [-4.35, 30, 36, 1]]) {
     const palette = pal ? [0xd9a02a, 0xe8b83a, 0xc77a1e, 0x9aa23a] : [0x5d8a2e, 0x7a9a34, 0x4a7428, 0xc9a02e];
-    const t = makeTree({ h: 8.5, crown: 2.9, seed, palette, clumps: 110 }); t.position.set(x, SW, z); t.rotation.y = rnd() * 6; scene.add(t);
+    const t = makeTree({ h: 8.5, crown: 2.9, seed, palette, clumps: 280, clumpScale: 0.62 }); t.position.set(x, SW, z); t.rotation.y = rnd() * 6; scene.add(t);
     add(scene, new THREE.BoxGeometry(1.2, 0.02, 1.2), std(0x2a2018, 1), x, SW + 0.005, z, { cast: false }); }
-  for (const [x, z, s] of [[28, 6, 41], [30, -10, 42], [26, 24, 43], [-30, -4, 44], [-28, 14, 45]]) { const t = makeTree({ h: 11, crown: 3.8, seed: s, palette: [0x2f4a2a, 0x3a5a2e, 0x24381f], clumps: 120 }); t.position.set(x, SW, z); scene.add(t); }
+  for (const [x, z, s] of [[28, 6, 41], [30, -10, 42], [26, 24, 43], [-30, -4, 44], [-28, 14, 45]]) { const t = makeTree({ h: 11, crown: 3.8, seed: s, palette: [0x2f4a2a, 0x3a5a2e, 0x24381f], clumps: 220, clumpScale: 0.7 }); t.position.set(x, SW, z); scene.add(t); }
   { const z30 = makeSign('zone30'); z30.position.set(3.82, SW, 11.6); z30.rotation.y = -Math.PI / 2; scene.add(z30);
     const st = makeSign('street', 'Lindenweg'); st.position.set(-3.82, SW, 13.5); st.rotation.y = Math.PI / 2; scene.add(st); }
   for (const [i, lid] of [[0, 0x2b2f34], [1, 0x1f5fbf], [2, 0x7a4a24]]) { const b = makeBin(lid); b.position.set(5.55, SW, -12.0 - i * 0.68); b.rotation.y = -Math.PI / 2 + (i - 1) * 0.08; scene.add(b); }
@@ -126,11 +126,11 @@ export async function buildStrasse(stage, o = {}) {
   if (party) {
     const base = new THREE.Vector3(P.fenceX, SW + 1.12, 3.65);
     const cols = [0xff5ab4, 0xffffff, 0xffc94a, 0xb46aff, 0xff8ad0, 0xf4d2c8]; const br = makeRng(8);
-    cols.forEach((c, i) => { const b = makeBalloon(c, { metal: i === 2 || i === 5 ? 0.6 : 0 }); const a = i / cols.length * 6.28; const p = base.clone().add(new THREE.Vector3(Math.cos(a) * 0.28 - 0.1, 1.05 + (i % 3) * 0.24, Math.sin(a) * 0.3 + 0.05)); b.position.copy(p); b.rotation.z = (br() - 0.5) * 0.3; scene.add(b); scene.add(stringBetween(base, p.clone().add(new THREE.Vector3(0, -0.22, 0)), 0.04)); });
+    cols.forEach((c, i) => { const b = makeBalloon(c, { metal: i === 2 || i === 5 ? 0.6 : 0 }); const a = i / cols.length * 6.28; const p = base.clone().add(new THREE.Vector3(Math.cos(a) * 0.28 - 0.1, 1.05 + (i % 3) * 0.24, Math.sin(a) * 0.3 + 0.05)); b.position.copy(p); b.rotation.z = (br() - 0.5) * 0.3; scene.add(b); sway.push(b); scene.add(stringBetween(base, p.clone().add(new THREE.Vector3(0, -0.22, 0)), 0.04)); });
     const font = await new FontLoader().loadAsync('node_modules/three/examples/fonts/helvetiker_bold.typeface.json');
     const foil = new THREE.MeshPhysicalMaterial({ color: 0xf2c45a, metalness: 0.85, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.1, emissive: 0x8a5a10, emissiveIntensity: 0.25 });
     const tg = new TextGeometry(o.balloonNumber ?? '18', { font, size: 0.34, depth: 0.05, curveSegments: 10, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.03, bevelSegments: 6 }); tg.center();
-    const t18 = new THREE.Mesh(tg, foil); t18.position.copy(base).add(new THREE.Vector3(-0.15, 1.3, -0.62)); t18.rotation.y = -Math.PI / 2 + 0.3; t18.rotation.z = 0.08; t18.castShadow = true; scene.add(t18); scene.add(stringBetween(base, t18.position.clone().add(new THREE.Vector3(0, -0.3, 0)), 0.03));
+    const t18 = new THREE.Mesh(tg, foil); t18.position.copy(base).add(new THREE.Vector3(-0.15, 1.3, -0.62)); t18.rotation.y = -Math.PI / 2 + 0.3; t18.rotation.z = 0.08; t18.castShadow = true; scene.add(t18); sway.push(t18); scene.add(stringBetween(base, t18.position.clone().add(new THREE.Vector3(0, -0.3, 0)), 0.03));
     const eave = (zz) => new THREE.Vector3(12.5 - 0.55, SW + 0.45 + 2 * 2.75 - 0.15, zz);
     scene.add(makeStringLights([eave(-4.5), new THREE.Vector3(10.0, SW + 3.1, -6.2), new THREE.Vector3(P.fenceX, SW + 1.12, 2.35)], { sag: 0.28 }));
     scene.add(makeStringLights([eave(4.6), new THREE.Vector3(P.fenceX + 0.1, SW + 1.15, 3.65)], { sag: 0.35 }));
@@ -145,5 +145,8 @@ export async function buildStrasse(stage, o = {}) {
     for (const z of [2.0, 4.1]) { const gl = new THREE.PointLight(0xffc27a, qn('gateI', 1.6), 4.5, 1.8); gl.position.set(P.fenceX - 0.6, SW + 1.9, z); scene.add(gl); }
   }
   stage.aimKey(new THREE.Vector3(8, 0, 0));
-  return { SW, ANCHOR, lampLights, partyHouse };
+  sway.forEach((o, i) => { o.userData.base = { p: o.position.clone(), r: o.rotation.clone(), i }; });
+  // Ballons im Wind bewegen: swayAt(t) jedes Frame aufrufen
+  const swayAt = (t) => sway.forEach(o => { const { p, r, i } = o.userData.base; o.rotation.z = r.z + 0.07 * Math.sin(t * 1.1 + i * 1.7); o.rotation.x = r.x + 0.05 * Math.sin(t * 0.8 + i); o.position.y = p.y + 0.025 * Math.sin(t * 0.9 + i * 2.1); });
+  return { SW, ANCHOR, lampLights, partyHouse, swayAt };
 }

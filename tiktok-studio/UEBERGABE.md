@@ -83,8 +83,17 @@
   ```
   Danach mit PIL (Lanczos) von 2160×3840 auf 1080×1920 verkleinern.
 - Video rendern:
-  - `render.js` rendert Bildfolgen über `window.renderFrame(t)` (so beim alten Piloten `regel1_v4.html`).
-  - **Für die Spielwelt gibt es noch keine Zeitleiste und keine Animation** → Abschnitt 7.
+  - Befehl: `node render.js clip_test.html <ordner> <sekunden> 30` → JPG-Bildfolge, danach mit ffmpeg zu MP4 (siehe `make_clip_test.sh`).
+  - **Vorlage für jede Folge: `clip_test.html`** (8-s-Testclip: Du läuft zur Party, Gäste tanzen, Ballons wehen, Kamerafahrt, Zähler und Untertitel).
+  - `kit_anim.js`:
+    - `Actor`: Animationen mit Überblendung, Laufweg, Drehung, `after`-Hook für Kopf/IK
+    - `clipSpeed`: Laufgeschwindigkeit messen, damit die Füße nicht rutschen
+    - `keys`, `cameraAt`: Keyframes und Kamerafahrt
+  - `kit_hud.js` (Serien-Overlay):
+    - Ort/Uhrzeit, Zähler „SELBSTRESPEKT“ mit rotem Blinken
+    - Untertitel, Endkarte „Was wäre, wenn …?“ und gelbe Frage
+  - Wichtig: Alles ist eine Funktion der Zeit `t`, deshalb ist jedes Frame reproduzierbar.
+  - Ein Frame (1×) dauert in SwiftShader etwa 1–3 s, 8 s Video (240 Frames) also ca. 5–10 min.
 - Ton:
   - `mix.py` mischt die Tonspur (ffmpeg: adelay, amix).
   - Klänge und Stimmen liegen in `audio/`.
@@ -189,7 +198,7 @@
 - [ ] Skripte für die ersten 7–10 Folgen (Hook, Ablauf, Sätze, Zähler-Stufen, Endfrage)
 - [ ] Serien-Bibel: Hauptfigur, wiederkehrende Figuren, Orte, Stimmen, Musik, Ende-Karte
 - [ ] Posting-Plan: Uhrzeiten, Captions, Hashtags, Titelbilder, KI-Kennzeichnung
-- [ ] Animations-System für die Spielwelt (Zeitleiste, Kamerafahrten, Laufen, Ton) und Testclip
+- [x] Animations-System für die Spielwelt (`kit_anim.js`, `kit_hud.js`) und Testclip `clip_test.mp4`
 - [x] Look-Baukasten, feste Besetzung (Charakterbogen) und drei Sets (Straße, Jugendzimmer, Schule) mit Referenzbildern in `look/`
 - [x] `LOOK_BIBEL.md`: Regeln und Arbeitsablauf für neue Orte
 - [ ] Handy-Chat-Overlay (2D-Einblendung für Chat- und Story-Szenen)

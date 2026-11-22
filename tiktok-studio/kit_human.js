@@ -209,7 +209,7 @@ export function makeHuman(o) {
     for (const n of ['hand_l', 'hand_r', 'foot_l', 'foot_r']) { const b = bonesBy[n]; const p = b.parent.scale; b.scale.set(1, 1 / p.y, 1 / p.z); } };
   const update = (t) => { mixer.setTime(t); applyBuild(); };
   update(o.time ?? 0.5);
-  root.userData = { mixer, play, update, bones: bonesBy, body, applyBuild };
+  root.userData = { mixer, play, update, bones: bonesBy, body, applyBuild, clips };
   if (o.x !== undefined) root.position.set(o.x, o.y ?? 0, o.z ?? 0);
   if (o.ry !== undefined) root.rotation.y = o.ry;
   return root;
