@@ -6,11 +6,13 @@ import { makeRng, taperTube, blobGeo, std, add } from './kit_world.js';
 // Spart beim Video-Rendern sehr viel Zeit; kit_look schaltet Ebene 3 für alle Schattenkameras frei.
 export const SHADOW_PROXY_LAYER = 3;
 let USE_PROXY = true; export function useShadowProxies(v) { USE_PROXY = v; }
+// Detailstufe der Laub-Büschel: 1 = schnell (Video), 2 = fein (Standbilder in Großaufnahme)
+let LEAF_DETAIL = (typeof location !== 'undefined' && new URLSearchParams(location.search).has('hq')) ? 2 : 1; export function setLeafDetail(d) { LEAF_DETAIL = d; }
 const proxyMat = new THREE.MeshBasicMaterial();
 function shadowProxy(parent, geo, x, y, z, sx, sy, sz) { const m = new THREE.Mesh(geo, proxyMat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.castShadow = true; m.receiveShadow = false; m.layers.set(SHADOW_PROXY_LAYER); parent.add(m); return m; }
 const PROXY_SPHERE = new THREE.SphereGeometry(1, 12, 9);
 
-const leafMat = () => { const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0 });
+const leafMat = () => { const m = new THREE.MeshLambertMaterial({ color: 0xffffff });
   // cheap fake subsurface: lift the shadowed side a little with the leaf colour
   m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * 0.035;'); };
   m.customProgramCacheKey = () => 'leaf'; return m; };
@@ -29,7 +31,7 @@ export function makeTree(o = {}) {
   for (let i = 0; i < nb; i++) { const a = i / nb * 6.283 + r() * 0.7; const end = new THREE.Vector3(C.x + Math.cos(a) * CR * 0.62, C.y + (r() - 0.35) * CR * 0.7, C.z + Math.sin(a) * CR * 0.62);
     const start = top.clone().add(new THREE.Vector3(0, -0.25 * k, 0)); const mid = start.clone().lerp(end, 0.5).add(new THREE.Vector3(0, 0.35 * k, 0));
     add(g, taperTube(new THREE.CatmullRomCurve3([start, mid, end]), 0.085 * k, 0.025 * k, 10, 6), bark); ends.push(end); }
-  const N = o.clumps ?? 90; const geo = blobGeo(2, 0.2, 2.3, o.seed ?? 1);
+  const N = o.clumps ?? 90; const geo = blobGeo(o.detail ?? LEAF_DETAIL, 0.2, 2.3, o.seed ?? 1);
   const im = new THREE.InstancedMesh(geo, leafMat(), N); im.castShadow = true; im.receiveShadow = true;
   const d = new THREE.Object3D(), col = new THREE.Color(), sq = o.squash ?? 0.82;
   for (let i = 0; i < N; i++) {
@@ -52,7 +54,7 @@ export function makeHedge(len, h, dep, o = {}) {
   const base = o.color ?? 0x2d4a22;
   add(g, new THREE.BoxGeometry(len - 0.12, h - 0.1, dep - 0.12), std(new THREE.Color(base).multiplyScalar(0.55), 0.95), 0, (h - 0.1) / 2, 0);
   const areaTop = len * dep, areaSide = len * h, areaEnd = dep * h; const tot = areaTop + 2 * areaSide + 2 * areaEnd; const N = Math.round(tot * (o.density ?? 115));
-  const geo = blobGeo(2, 0.22, 3.0, (o.seed ?? 5) + 1); const im = new THREE.InstancedMesh(geo, leafMat(), N); im.castShadow = true; im.receiveShadow = true;
+  const geo = blobGeo(o.detail ?? LEAF_DETAIL, 0.22, 3.0, (o.seed ?? 5) + 1); const im = new THREE.InstancedMesh(geo, leafMat(), N); im.castShadow = true; im.receiveShadow = true;
   const d = new THREE.Object3D(), col = new THREE.Color();
   for (let i = 0; i < N; i++) { const t = r() * tot; let x, y, z;
     if (t < areaTop) { x = (r() - 0.5) * len; z = (r() - 0.5) * dep; y = h - 0.05 + (r() - 0.5) * 0.06; }

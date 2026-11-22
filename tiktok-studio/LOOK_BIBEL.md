@@ -89,7 +89,9 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 3. Kamera und Licht nachjustieren. URL-Parameter helfen beim Ausprobieren:
    - Kamera: `cx`, `cy`, `cz`, `tx`, `ty`, `tz`, `fov`
    - Bildlook: `exp`, `sat`, `bloom`, `ap`
-4. Finales Bild: `node still.js "szene.html" out.png 2`, danach mit PIL (Lanczos) auf 1080×1920 verkleinern.
+4. Finales Bild: `node still.js "szene.html?hq" out.png 2`, danach mit PIL (Lanczos) auf 1080×1920 verkleinern.
+   - Video: `node render.js szene.html ordner <sekunden> 24` (ohne `hq`, ca. 5,6 s pro Frame), danach ffmpeg wie in `make_clip_test.sh`.
+   - Vor dem ersten Video-Frame `stage.limitLights(fokuspunkt, 8)` aufrufen.
 5. Neuer Ort: Referenzbild nach `look/` legen und hier in Abschnitt 2 eintragen.
 
 ## 5. Sets und wichtige Punkte (Anker)

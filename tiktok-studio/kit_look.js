@@ -56,10 +56,12 @@ export function buildSky(target, P, { withStars = true, moonPos = [186, 128, -16
 // URL-Parameter überschreiben Preset-Werte: exp, sat, con, vig, bloom, bth, ao, env, hemi, key, rim, ap, dof, fov, cx..tz
 export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = location.search, parent = document.getElementById('wrap') || document.body, shadowSize = 4096, shadowExtent = 22 } = {}) {
   const Q = new URLSearchParams(query); const qn = (k, d) => Q.has(k) ? parseFloat(Q.get(k)) : d;
+  // ?hq = höchste Qualität für Standbilder (volles Himmelslicht, volle Auflösung der Nachbearbeitung, weiche Schatten, feines Laub)
+  if (Q.has('hq')) ['fullibl', 'fullpost', 'softshadow'].forEach(k => Q.set(k, '1'));
   const P = resolvePreset(Q.get('preset') || preset);
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(window.devicePixelRatio || 1); renderer.setSize(W, H);
-  renderer.shadowMap.enabled = !Q.has('noshadow'); renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = !Q.has('noshadow'); renderer.shadowMap.type = Q.has('softshadow') ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = qn('exp', P.exp);
   parent.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
@@ -100,7 +102,19 @@ export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = loca
           void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; c = mix(c, c*c*(3.0-2.0*c), con); float l = dot(c, vec3(0.299,0.587,0.114)); c = mix(vec3(l), c, sat);
             c += vec3(-0.012, 0.0, 0.03) * (1.0 - l) * (1.0 - l) + vec3(0.025, 0.01, -0.012) * l * l;
             vec2 d = (vUv - 0.5) * vec2(1.0, 0.62); c *= 1.0 - dot(d, d) * vig; gl_FragColor = vec4(c, 1.0); }` });
-      composer.addPass(grade); composer.setSize(W, H); return stage; },
+      composer.addPass(grade); composer.setSize(W, H);
+      // Umgebungsverdeckung und Tiefe für die Unschärfe in halber Auflösung (spart viel Zeit, kaum sichtbar)
+      if (!Q.has('fullpost')) { if (stage.passes.gtao) stage.passes.gtao.setSize(W / 2, H / 2); if (bokeh) bokeh.renderTargetDepth.setSize(W / 2, H / 2); }
+      // Tiefenschärfe nutzt die Tiefe, die die Umgebungsverdeckung ohnehin berechnet (spart einen kompletten Szenen-Durchgang)
+      if (bokeh && stage.passes.gtao && !Q.has('fullpost')) { const ao = stage.passes.gtao; bokeh.materialBokeh.defines.DEPTH_PACKING = 0; bokeh.materialBokeh.needsUpdate = true; bokeh.uniforms.tDepth.value = ao.depthTexture;
+        bokeh.render = function (r, writeBuffer, readBuffer) { this.uniforms.tColor.value = readBuffer.texture; this.uniforms.nearClip.value = this.camera.near; this.uniforms.farClip.value = this.camera.far;
+          if (this.renderToScreen) { r.setRenderTarget(null); this.fsQuad.render(r); } else { r.setRenderTarget(writeBuffer); r.clear(); this.fsQuad.render(r); } }; }
+      // Himmelslicht (Env-Map) nur für glänzende Materialien; matte Flächen bekommen es über ein stärkeres Hemisphärenlicht (spart ~2 s pro Bild)
+      if (!Q.has('fullibl')) { const env = scene.environment, k = scene.environmentIntensity; const seen = new Set();
+        scene.traverse(o => { if (!o.isMesh) return; for (const m of (Array.isArray(o.material) ? o.material : [o.material])) { if (!m || seen.has(m) || !m.isMeshStandardMaterial) continue; seen.add(m);
+          const glossy = m.roughness < 0.45 || m.metalness > 0.3 || m.clearcoat > 0; if (glossy && !m.envMap) { m.envMap = env; m.envMapIntensity = k; m.needsUpdate = true; } } });
+        scene.environment = null; hemi.intensity += k * (P.iblToHemi ?? 0.55); }
+      return stage; },
     setFocus(point) { if (bokeh) bokeh.uniforms.focus.value = camera.position.distanceTo(point); return stage; },
     render() { composer.render(); return true; },
     composer: () => composer,

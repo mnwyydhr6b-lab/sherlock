@@ -93,7 +93,18 @@
     - Ort/Uhrzeit, Zähler „SELBSTRESPEKT“ mit rotem Blinken
     - Untertitel, Endkarte „Was wäre, wenn …?“ und gelbe Frage
   - Wichtig: Alles ist eine Funktion der Zeit `t`, deshalb ist jedes Frame reproduzierbar.
-  - Ein Frame (1×) dauert in SwiftShader etwa 1–3 s, 8 s Video (240 Frames) also ca. 5–10 min.
+  - **Render-Tempo (optimiert am 22.11.):** ca. 5,6 s pro Frame bei 1080×1920, vorher 12,4 s.
+    - Empfehlung: **24 fps** – eine 50-s-Folge sind 1.200 Frames, also ca. **1,9 h** Renderzeit (im Hintergrund laufen lassen).
+    - Paralleles Rendern bringt nur ca. 10 %, weil SwiftShader die 4 Kerne schon nutzt.
+  - Eingebaute Optimierungen:
+    - Laub mit Detailstufe 1 und Lambert-Material
+    - Schatten-Stellvertreter für Bäume und Hecken (Ebene 3)
+    - Umgebungsverdeckung in halber Auflösung; die Tiefenschärfe nutzt deren Tiefe
+    - Himmelslicht (Env-Map) nur auf glänzenden Materialien, matte Flächen über ein stärkeres Hemisphärenlicht
+    - Triplanar-Texturen mit einer Projektion statt drei
+    - PCF-Schatten
+    - `stage.limitLights(punkt, 8)`
+  - Für Standbilder (Key-Visuals, Referenzen) `?hq` anhängen: alles in höchster Qualität (feines Laub, volle Nachbearbeitung, weiche Schatten). Für Videos ohne `hq` rendern.
 - Ton:
   - `mix.py` mischt die Tonspur (ffmpeg: adelay, amix).
   - Klänge und Stimmen liegen in `audio/`.

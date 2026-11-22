@@ -122,18 +122,16 @@ export function triMat({ map = null, bump = null, scale = 0.5, color = 0xffffff,
         triW = instanceMatrix * triW; triN = mat3(instanceMatrix) * triN;
       #endif
       triW = modelMatrix * triW; vTriPos = triW.xyz; vTriN = normalize(mat3(modelMatrix) * triN);`);
-    sh.fragmentShader = 'uniform float triScale;\nvarying vec3 vTriPos;\nvarying vec3 vTriN;\n' + sh.fragmentShader
+    sh.fragmentShader = 'uniform float triScale;\nvarying vec3 vTriPos;\nvarying vec3 vTriN;\nvec2 triPlaneUV(vec3 p) { vec3 a = abs(vTriN); return (a.x > a.y && a.x > a.z) ? p.zy * triScale : (a.y > a.z ? p.xz * triScale : p.xy * triScale); }\n' + sh.fragmentShader
       .replace('#include <map_fragment>', `
       #ifdef USE_MAP
-        vec3 tw = pow(abs(normalize(vTriN)), vec3(6.0)); tw /= (tw.x + tw.y + tw.z);
-        vec4 sampledDiffuseColor = texture2D(map, vTriPos.zy * triScale) * tw.x + texture2D(map, vTriPos.xz * triScale) * tw.y + texture2D(map, vTriPos.xy * triScale) * tw.z;
-        diffuseColor *= sampledDiffuseColor;
+        vec2 triUV = triPlaneUV(vTriPos);
+        diffuseColor *= texture2D(map, triUV);
       #endif`)
       .replace('#include <bumpmap_pars_fragment>', `
       #ifdef USE_BUMPMAP
         uniform sampler2D bumpMap; uniform float bumpScale;
-        float triH(vec3 p) { vec3 w = pow(abs(normalize(vTriN)), vec3(6.0)); w /= (w.x + w.y + w.z);
-          return texture2D(bumpMap, p.zy * triScale).x * w.x + texture2D(bumpMap, p.xz * triScale).x * w.y + texture2D(bumpMap, p.xy * triScale).x * w.z; }
+        float triH(vec3 p) { return texture2D(bumpMap, triPlaneUV(p)).x; }
         vec2 dHdxy_fwd() { vec3 dpx = dFdx(vTriPos), dpy = dFdy(vTriPos); float Hll = bumpScale * triH(vTriPos);
           return vec2(bumpScale * triH(vTriPos + dpx) - Hll, bumpScale * triH(vTriPos + dpy) - Hll); }
         vec3 perturbNormalArb( vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float faceDirection ) {
