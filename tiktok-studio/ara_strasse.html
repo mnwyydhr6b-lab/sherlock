@@ -11,20 +11,28 @@
 </script>
 <script type="module">
 // Vergleich alte/neue Figuren in derselben Szene (Straße nachts): Du tippt am Handy, Mia redet mit ihm.
-// ara_strasse.html?mode=alt | mode=neu&du=du_tw&mia=mia_tw
+// ara_strasse.html?mode=alt | mode=neu&du=du_tw&mia=mia_tw | mode=moves (alte Figuren mit übertragenen Bewegungen)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createStage } from './kit_look.js';
 import { buildStrasse, SW } from './set_strasse.js';
 import { loadHumanAssets, spawn, posePhone, lookAt } from './kit_cast.js';
+import { loadMoves, retarget, faceFromMoves, showPhone } from './kit_retarget.js';
 const stage = createStage({ preset: 'nacht' });
 const { scene, qn, Q } = stage;
-const DU = new THREE.Vector3(5.35, SW, 3.0), MIA = new THREE.Vector3(5.95, SW, 2.25);
+const DU = new THREE.Vector3(5.35, SW, 3.0), MIA = new THREE.Vector3(qn('mx', 6.1), SW, qn('mz', 2.95));
 const ryDu = -1.25, ryMia = Math.atan2(DU.x - MIA.x, DU.z - MIA.z);
 async function main() {
   await buildStrasse(stage, { party: true });
   let focus;
-  if (Q.get('mode') === 'alt') {
+  if (Q.get('mode') === 'moves') {
+    await loadHumanAssets(); const mm = await loadMoves('m'), mf = await loadMoves('f');
+    const play = (h, moves, name, t) => { const c = retarget(h, moves, name); const mx = h.userData.mixer; mx.stopAllAction(); mx.clipAction(c).play(); mx.setTime(t); h.userData.applyBuild(); showPhone(h, !!c.userData.phone); h.updateMatrixWorld(true); if (c.userData.face) h.userData.face.set(faceFromMoves(c, t)); return c; };
+    const du = spawn('du', { anim: 'Idle_Loop', x: DU.x, y: DU.y, z: DU.z, ry: ryDu }); scene.add(du); play(du, mm, Q.get('dumove') || 'Texting', qn('tdu', 2.0));
+    const mia = spawn('mia', { anim: 'Idle_Loop', x: MIA.x, y: MIA.y, z: MIA.z, ry: ryMia }); scene.add(mia); play(mia, mf, Q.get('miamove') || 'Talk with gestures', qn('tmia', 1.5));
+    mia.userData.face.set({ smileL: 0.5, smileR: 0.5 });
+    focus = du.userData.bones.Head.getWorldPosition(new THREE.Vector3());
+  } else if (Q.get('mode') === 'alt') {
     await loadHumanAssets();
     const du = spawn('du', { anim: 'Idle_Loop', time: 1.0, x: DU.x, y: DU.y, z: DU.z, ry: ryDu }); scene.add(du); posePhone(du);
     const mia = spawn('mia', { anim: 'Idle_Talking_Loop', time: 1.4, x: MIA.x, y: MIA.y, z: MIA.z, ry: ryMia }); scene.add(mia);

@@ -13,11 +13,13 @@
 // Prüfstand: eine Figur in einer Standard-Pose als Halbtotale – zum Prüfen auf Durchdringungen, Löcher, Griffe.
 // pruefstand.html?who=mia&pose=handy&yaw=25
 //   pose: stehen | handy | reden | arme | sitzen        yaw: Kamera um die Figur (Grad)      near: 1 = Nahaufnahme der Hände
+//   move: übertragene Bewegung aus kit_retarget (z. B. Texting, Phone call, Talk with gestures, Laugh, Sit idle) mit t = Zeitpunkt
 // Rendern: node still.js "pruefstand.html?who=mia&pose=handy" out.png 1 600 800
 import * as THREE from 'three';
 import { createStage } from './kit_look.js';
 import { cnv, tex, makeRng, rbox, std } from './kit_world.js';
-import { loadHumanAssets, spawn, posePhone, sitOn, lookAt } from './kit_cast.js';
+import { loadHumanAssets, spawn, posePhone, sitOn, lookAt, CAST } from './kit_cast.js';
+import { loadMoves, retarget, faceFromMoves, showPhone } from './kit_retarget.js';
 
 const stage = createStage({ preset: 'studio', shadowExtent: 3, W: innerWidth, H: innerHeight });
 const { scene, Q, qn } = stage; stage.keyLight.intensity *= 0.35; if (stage.rimLight) stage.rimLight.intensity *= 0.4; stage.hemi.intensity *= 0.7;
@@ -33,12 +35,17 @@ const pose = Q.get('pose') || 'stehen';
 const anim = { stehen: 'Idle_Loop', handy: 'Idle_Loop', reden: 'Idle_Talking_Loop', arme: 'Idle_FoldArms_Loop', sitzen: 'Sitting_Idle_Loop' }[pose] || 'Idle_Loop';
 const h = spawn(Q.get('who') || 'du', { anim, time: qn('t', 0.8), x: 0, y: 0, z: 0, ry: qn('ry', 0) }); scene.add(h); h.updateMatrixWorld(true);
 const b = h.userData.bones;
+const move = Q.get('move');
+if (move) { const moves = await loadMoves(CAST[Q.get('who') || 'du'].sex === 'female' ? 'f' : 'm'); const clip = retarget(h, moves, move);
+  const mx = h.userData.mixer; mx.stopAllAction(); mx.clipAction(clip).play(); mx.setTime(qn('t', 1.0)); h.userData.applyBuild(); showPhone(h, !!clip.userData.phone); h.updateMatrixWorld(true);
+  if (clip.userData.face) h.userData.face.set(faceFromMoves(clip, qn('t', 1.0))); }
 if (pose === 'sitzen') { const stool = new THREE.Mesh(rbox(0.42, 0.45, 0.4, 0.03), std({ color: 0x6a5a8a, roughness: 0.7 })); stool.position.set(0, 0.225, -0.08); stool.castShadow = stool.receiveShadow = true; scene.add(stool); sitOn(h, new THREE.Vector3(0, 0.46, -0.06)); }
 const hp0 = b.Head.getWorldPosition(new THREE.Vector3());
 const yaw = qn('yaw', 25) * Math.PI / 180;
-if (pose === 'handy') posePhone(h, {});
+if (move) {}
+else if (pose === 'handy') posePhone(h, {});
 else if (pose !== 'arme') lookAt(h, new THREE.Vector3(Math.sin(yaw) * 2, hp0.y + 0.05, Math.cos(yaw) * 2), 0.6);
-if (pose === 'reden') h.userData.face.expr('happy', 0.6, { jawOpen: 0.25 });
+if (!move && pose === 'reden') h.userData.face.expr('happy', 0.6, { jawOpen: 0.25 });
 h.updateMatrixWorld(true);
 const hp = b.Head.getWorldPosition(new THREE.Vector3());
 const near = Q.has('near');
