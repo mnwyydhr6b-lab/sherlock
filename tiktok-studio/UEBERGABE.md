@@ -18,6 +18,7 @@
   - Nutzer hat nur ein iPhone und keine 3D-Erfahrung → Claude produziert alles in der Cloud.
 - Kosten: Higgsfield ist zu teuer (nicht nutzen). ElevenLabs ist als verbundener Dienst verfügbar (Ton, Stimmen).
 - Posten ist erst ab ca. **29.11.2026** möglich. Bis dahin wird alles rundherum vorbereitet.
+- **Account:** Der bestehende Account (ca. 2.700 Follower) wird weitergenutzt und auf die neue Nische umgestellt (entschieden am 22.11.).
 
 ## 2. Format
 
@@ -34,7 +35,8 @@
     - dunkles Overlay
     - weißer Titel „Was wäre, wenn …?“
     - gelbe kursive Frage, z. B. „Wärst du trotzdem hingegangen?“ (lädt zum Kommentieren ein)
-- **Länge:** Pilot 40–45 s. Wegen der CRP-Regel ab 1 Minute ist die Länge noch offen, siehe Abschnitt 7.
+- **Länge (entschieden am 22.11.):** **50 Sekunden pro Folge bis 10.000 Follower.** Danach (CRP) auf 61–70 s umstellen, weil nur Videos ab 1 Minute vergütet werden.
+  - Pilot-Referenz: 42 s.
 - **Regel Nr. 1 – Pilot-Skript (Untertitel / Stimmen):**
   - 4,1 s: „Vielleicht haben sie’s vergessen.“
   - 8,6 s: Leon: „Oh … hey.“
@@ -157,8 +159,9 @@
 ## 6. Vorbereitung bis zum Start (Checkliste)
 
 - [x] Spielwelt gebaut und freigegeben, Assets im Repo gesichert
-- [ ] Länge der Folgen festlegen (CRP: ab 1 Minute)
-- [ ] Kanal-Auftritt: bestehender Account oder neuer, Name, Bio, Profilbild im Spielwelt-Look
+- [x] Länge der Folgen: 50 s bis 10k, danach 61–70 s
+- [x] Account: bestehender Account wird weitergenutzt
+- [ ] Kanal-Auftritt: Anzeigename, Bio, Profilbild im Spielwelt-Look; alte, unpassende Videos auf „Nur ich“ stellen (Nutzer entscheidet)
 - [ ] Folgenliste: 30 Regeln, nach Viral-Potenzial sortiert
 - [ ] Skripte für die ersten 7–10 Folgen (Hook, Ablauf, Sätze, Zähler-Stufen, Endfrage)
 - [ ] Serien-Bibel: Hauptfigur, wiederkehrende Figuren, Orte, Stimmen, Musik, Ende-Karte
@@ -169,3 +172,11 @@
 ## 7. Nächste Schritte
 
 Wird beim Abschluss der Vorbereitung ausgefüllt.
+
+## 8. So startet der neue Chat
+
+1. Den neuen Chat mit demselben Repository `mnwyydhr6b-lab/sherlock` starten.
+   - Am besten in derselben Umgebung, damit ElevenLabs verbunden ist.
+2. Erste Nachricht:
+   „Hol dir den Branch `claude/wizardly-rubin-v81hm1`, lies `tiktok-studio/UEBERGABE.md` komplett und mach bei Abschnitt 7 weiter.“
+3. Claude im neuen Chat führt `cd tiktok-studio && npm install` aus und prüft mit einem Standbild, dass die Spielwelt rendert.
