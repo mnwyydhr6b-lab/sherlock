@@ -45,3 +45,6 @@ tests/.excluded_sites
 
 # Vim swap files
 *.swp
+
+# Test-Exporte der neuen Figuren (lassen sich aus figuren_neu/*.json neu erzeugen)
+tiktok-studio/assets/ara_test/

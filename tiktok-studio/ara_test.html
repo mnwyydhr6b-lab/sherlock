@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Test: neue Figuren (Ara3D-Export, GLB) nebeneinander im Studio-Licht.
+// ara_test.html?files=m_cs1,m_cs2&clip=idle&t=1.2
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createStage } from './kit_look.js';
+import { cnv, tex, makeRng, std } from './kit_world.js';
+
+const stage = createStage({ preset: 'studio', shadowExtent: 6, W: innerWidth, H: innerHeight });
+const { scene, Q, qn } = stage; stage.keyLight.intensity *= 0.5; if (stage.rimLight) stage.rimLight.intensity *= 0.5; stage.hemi.intensity *= 0.8;
+{ const S = 1024, c = cnv(S, S), g = c.getContext('2d'); const r = makeRng(5);
+  const bg = g.createRadialGradient(S * 0.55, S * 0.4, 40, S * 0.5, S * 0.5, S * 0.8); bg.addColorStop(0, '#24214a'); bg.addColorStop(0.6, '#101128'); bg.addColorStop(1, '#06060e'); g.fillStyle = bg; g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 24; i++) { const x = S * r(), y = S * r(), rad = 20 + r() * 70, a = 0.08 + r() * 0.2; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(255,170,220,${a})`); gr.addColorStop(1, 'rgba(255,170,220,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, rad, 0, 6.28); g.fill(); }
+  const bd = new THREE.Mesh(new THREE.PlaneGeometry(14, 8), new THREE.MeshBasicMaterial({ map: tex(c), toneMapped: false, fog: false })); bd.position.set(0, 1.8, -3.5); scene.add(bd); }
+const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 48), std({ color: 0x2a2838, roughness: 0.9 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+const files = (Q.get('files') || 'm_cs1').split(','); const clipName = Q.get('clip') || 'idle'; const t = qn('t', 1.2);
+const loader = new GLTFLoader(); const gap = qn('gap', 0.72); const n = files.length; const heads = [];
+for (let i = 0; i < n; i++) {
+  const g = await loader.loadAsync(`assets/ara_test/${files[i]}.glb`);
+  const root = g.scene; root.position.set((i - (n - 1) / 2) * gap, 0, 0); root.rotation.y = qn('ry', 0.25);
+  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (/hair/i.test(m.name)) { m.alphaTest = qn('hairA', 0.04); m.transparent = true; m.depthWrite = true; m.side = THREE.DoubleSide; } }); } });
+  scene.add(root);
+  const clip = g.animations.find(c => c.name === clipName) || g.animations.find(c => c.name.toLowerCase().includes(clipName)) || g.animations[0];
+  if (clip) { const mixer = new THREE.AnimationMixer(root); mixer.clipAction(clip).play(); mixer.setTime(t); }
+  if (i === 0) console.log('clips', g.animations.map(c => c.name).join(','));
+  // Gesichts-Blendshapes setzen: morph=mouthSmile:1,jawOpen:0.3
+  if (Q.get('morph')) { const mv = Object.fromEntries(Q.get('morph').split(',').map(s => s.split(':')).map(([k, v]) => [k, +v]));
+    root.traverse(o => { if (o.morphTargetDictionary) for (const [k, v] of Object.entries(mv)) { const idx = o.morphTargetDictionary[k]; if (idx !== undefined) o.morphTargetInfluences[idx] = v; } }); }
+  if (i === 0) { const names = new Set(); root.traverse(o => { if (o.morphTargetDictionary) Object.keys(o.morphTargetDictionary).forEach(k => names.add(k)); }); console.log('morphs', [...names].join(',')); }
+  root.updateMatrixWorld(true); let head = null; root.traverse(o => { if (o.isBone && /head$/i.test(o.name) && !head) head = o; }); if (head) heads.push(head.getWorldPosition(new THREE.Vector3()));
+}
+const w = Math.max(1.2, n * gap); const cy = qn('ty', 0) || 1.0;
+const dist = qn('dist', w * 1.15 + 1.2);
+if (Q.has('face') && heads[0]) { const hp = heads[+Q.get('face') || 0]; const yaw = qn('yaw', 15) * Math.PI / 180; const fc = hp.clone().add(new THREE.Vector3(0, qn('foff', 0.035), 0.05));
+  stage.view({ pos: fc.clone().add(new THREE.Vector3(Math.sin(yaw) * 0.6, 0.03, Math.cos(yaw) * 0.6)).toArray(), target: fc.toArray(), fov: qn('fov', 24) }).build({ focus: fc, aperture: 0.0003, maxblur: 0.003 }).ready(); }
+else stage.view({ pos: [0, qn('cy', 1.25), dist], target: [0, cy, 0], fov: qn('fov', 40) }).build({ focus: new THREE.Vector3(0, 1.3, 0), aperture: 0.0002, maxblur: 0.002 }).ready();
+</script>
+</body>
+</html>

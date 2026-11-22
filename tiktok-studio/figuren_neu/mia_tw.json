@@ -1,0 +1,42 @@
+{
+ "kind": "ara-character",
+ "version": 1,
+ "params": {
+  "name": "mia_tw",
+  "detail": "medium",
+  "rig": "game",
+  "faceBones": true,
+  "faceShapes": true,
+  "speechShapes": true,
+  "teeth": "teeth_base",
+  "eyelashes": "eyelashes02",
+  "gender": 0,
+  "ageYears": 17,
+  "height": 0.75,
+  "caucasian": 1,
+  "african": 0,
+  "asian": 0,
+  "weight": 0.4,
+  "skin": "young_caucasian_female",
+  "hair": "long01",
+  "hairTint": "#c0603a",
+  "eyes": "green",
+  "eyebrows": "eyebrow010",
+  "top": "techwear_jacket",
+  "bottom": "baggy_jeans",
+  "shoes": "sneakers",
+  "garmentStyles": {
+   "techwear_jacket": {
+    "pattern": "solid",
+    "color": "#f2c230",
+    "color2": "#f2c230"
+   },
+   "baggy_jeans": {
+    "pattern": "denim",
+    "color": "#4a6a9c"
+   }
+  },
+  "outfit": "none",
+  "underwear": true
+ }
+}
