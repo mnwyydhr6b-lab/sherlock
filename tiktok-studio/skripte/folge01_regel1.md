@@ -1,6 +1,6 @@
 # Folge 1 – „Wenn du nicht eingeladen bist, geh nicht hin.“ (50 s, Ego-Perspektive)
 
-> Stand 23.11.2026. Hook und Ablauf mit dem Nutzer festgelegt. Story-Ende: Vorschlag 1 (Nutzer 23.11.). **Offen: einheitliche Endkarte** (Vorschlag unten).
+> Stand 23.11.2026. Hook und Ablauf mit dem Nutzer festgelegt. Story-Ende und einheitliche Endkarte vom Nutzer bestätigt (23.11.).
 > Produktion: 24.11. (Wochenlimit am 23.11. bei 96 %).
 
 ## Rahmen
@@ -44,8 +44,8 @@
 **36–44 s · Story-Ende (entschieden 23.11.)**
 - Leon kommt: „Ey … ist heute eher so ’n kleiner Kreis.“ Du geht raus, die Tür fällt hinter ihm zu, drinnen wird die Musik wieder laut. Untertitel: „Die Party ging weiter. Nur ohne dich.“ → **5**
 
-**44–50 s · Endkarte – OFFEN (soll in jeder Folge gleich sein)**
-- Vorschlag: dunkles Overlay → klein „REGEL NR. 1“ → Regel groß in Weiß: „Wenn du nicht eingeladen bist, geh nicht hin.“ → gelbe kursive Frage: „Wärst du trotzdem hingegangen?“ → klein unten: „Folge für Regel Nr. 2“.
+**44–50 s · Endkarte (Serien-Standard ab Folge 1, bestätigt 23.11.)**
+- Dunkles Overlay → klein „REGEL NR. 1“ → Regel groß in Weiß: „Wenn du nicht eingeladen bist, geh nicht hin.“ → gelbe kursive Frage: „Wärst du trotzdem hingegangen?“ → klein unten: „Folge für Regel Nr. 2“.
 
 ## Stimmen (ElevenLabs, eleven_v3, `language_code: de`)
 

@@ -253,6 +253,8 @@
 | Fr 27.11. | ⭐ 10 – Lach nicht mit, wenn über dich gelacht wird | Schulhof (Tag) | – |
 | Sa 28.11. | Puffer: Nacharbeiten oder eine weitere Folge | – | – |
 
+**Einheitliche Endkarte (Nutzer 23.11., gilt für jede Folge, ersetzt „Was wäre, wenn …?“):** dunkles Overlay → klein „REGEL NR. X“ → Regel groß in Weiß → gelbe kursive Frage → klein „Folge für Regel Nr. X+1“. In `kit_hud.js` noch umsetzen.
+
 **Ablauf pro Folge**
 1. **Mit dem Nutzer** Hook und Aufbau festlegen. Kurz vorschlagen, Nutzer entscheidet.
    - Rahmen: 50 s, Zähler „Selbstrespekt“, Endkarte „Was wäre, wenn …?“ und gelbe Frage
