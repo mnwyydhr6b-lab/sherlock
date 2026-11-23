@@ -128,7 +128,7 @@ export function spawnBlock(name, o = {}) {
   const fz = tc.z + TD / 2;
   if (spec.top === 'hoodie') { put('spine_03', rbox(TW * 0.82, 0.1, 0.14, 0.045, 3), mTop2, new THREE.Vector3(0, tTop - 0.01, tc.z - TD * 0.42)); // Kapuze
     put('spine_02', rbox(TW * 0.56, 0.12, 0.02, 0.02, 2), mTop2, new THREE.Vector3(0, tBot + 0.1, fz + 0.004)); // Bauchtasche
-    for (const sx of [-1, 1]) put('spine_03', rbox(0.016, 0.13, 0.016, 0.006, 2), toy(0xf4f4f4), new THREE.Vector3(sx * 0.05, tTop - 0.1, fz + 0.012)); }
+    for (const sx of [-1, 1]) put('spine_03', rbox(0.016, 0.13, 0.016, 0.006, 2), toy(0xf4f4f4), new THREE.Vector3(sx * 0.05, tTop - 0.1, fz + 0.012)).userData.povHide = true; } // Kordeln: in der Ego-Perspektive zu nah an der Kamera
   if (spec.top === 'jacket') { put('spine_02', rbox(0.014, tTop - tBot - 0.02, 0.012, 0.005, 2), toy(shade(spec.shirt, 0.55)), new THREE.Vector3(0, tc.y, fz + 0.003));
     for (const sx of [-1, 1]) put('spine_03', rbox(0.12, 0.08, 0.05, 0.02, 2), toy(shade(spec.shirt, 1.05)), new THREE.Vector3(sx * 0.09, tTop - 0.02, fz - 0.01), { rot: new THREE.Quaternion().setFromEuler(new THREE.Euler(0.25, 0, sx * 0.4)) }); }
   if (spec.top === 'shirt') { put('spine_02', rbox(0.012, tTop - tBot - 0.04, 0.012, 0.005, 2), toy(0xffffff), new THREE.Vector3(0, tc.y, fz + 0.003)); }
@@ -176,7 +176,9 @@ export function syncPhone(h) { let on = false; for (const a of h.userData.mixer.
 
 // ---------------------------------------------------------------- Ego-Perspektive (die Serie wird aus der Sicht von „Du“ erzählt)
 // Kopf, Haare und Gesicht von „Du“ ausblenden (der Rest – Hoodie, Arme, Hände – bleibt im Bild, wenn man nach unten schaut)
-export function povHide(h, on = true) { const head = h.userData.bones.Head; head.traverse(o => { if (o.isMesh && o.userData.block) o.visible = !on; }); }
+export function povHide(h, on = true, { body = false } = {}) { const head = h.userData.bones.Head; head.traverse(o => { if (o.isMesh && o.userData.block) o.visible = !on; }); h.traverse(o => { if (o.isMesh && o.userData.povHide) o.visible = !on; });
+  // body: true -> auch Rumpf, Hüfte und Beine ausblenden (wie in Ego-Spielen: nur Arme und Hände sichtbar), z. B. beim Blick aufs Handy
+  for (const o of h.userData.blockParts || []) { const bn = o.parent && o.parent.name || ''; if (/^(spine_0[1-3]|pelvis|thigh_|calf_|foot_|ball_)/.test(bn)) o.visible = on && body ? false : !o.userData.povHide || !on; } }
 // Blick von „Du“: Augenpunkt + Richtung. Kopf-Modus folgt dem Kopf (Animation), ruhiger Modus nutzt Körperposition + Blickrichtung des Körpers.
 export function povPose(h, { forward = 0.11, up = 0.17, pitch = 0, steady = false, bob = 0, t = 0 } = {}) {
   h.updateMatrixWorld(true);

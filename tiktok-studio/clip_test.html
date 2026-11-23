@@ -55,6 +55,7 @@ async function main() {
     const st = povPose(du, { steady: true, pitch: -0.06, bob: t < tStop ? 0.012 : 0, t });
     const kLook = smooth((t - tStop + 0.4) / 1.2); st.dir.lerp(guests.clone().sub(st.eye).normalize(), kLook).normalize();
     const hd = povPose(du); const kPh = smooth((t - tPhone - 0.15) / 0.7);
+    povHide(du, true, { body: kPh > 0.5 }); // beim Blick aufs Handy nur Arme/Hände zeigen (Rumpf wäre direkt vor der Kamera)
     { const ph = du.getObjectByName('AraPhone_l'); if (ph && kPh > 0) { const p = ph.getWorldPosition(new THREE.Vector3()); p.y += 0.09; hd.dir.copy(p.sub(hd.eye).normalize()); } } // Blick aufs Handy: Handy im unteren Bilddrittel
     const eye = st.eye.clone().lerp(hd.eye, kPh), dir = st.dir.clone().lerp(hd.dir, kPh).normalize();
     const cam = stage.camera; cam.position.copy(eye); cam.lookAt(eye.clone().add(dir)); cam.fov = 60 + 10 * kPh; cam.near = 0.03; cam.updateProjectionMatrix();
