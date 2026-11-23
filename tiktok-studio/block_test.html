@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1920px;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Test der Klötzchen-Figuren in der Straße. block_test.html?shot=strasse | nah&expr=happy | peinlich
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { buildStrasse, SW } from './set_strasse.js';
+import { loadHumanAssets } from './kit_cast.js';
+import { spawnBlock } from './kit_block.js';
+import { loadMoves, retarget, faceFromMoves, showPhone } from './kit_retarget.js';
+const stage = createStage({ preset: 'nacht' });
+const { scene, qn, Q } = stage;
+const shot = Q.get('shot') || 'strasse';
+const DU = new THREE.Vector3(5.35, SW, 3.0), MIA = new THREE.Vector3(qn('mx', 6.1), SW, qn('mz', 2.95));
+async function main() {
+  await buildStrasse(stage, { party: true });
+  await loadHumanAssets(); const mm = await loadMoves('m'), mf = await loadMoves('f');
+  const play = (h, moves, name, t) => { const c = retarget(h, moves, name); const mx = h.userData.mixer; mx.stopAllAction(); mx.clipAction(c).play(); mx.setTime(t); h.userData.applyBuild(); showPhone(h, !!c.userData.phone); h.updateMatrixWorld(true); return c; };
+  const du = spawnBlock('du', { x: DU.x, y: DU.y, z: DU.z, ry: -1.25 }); scene.add(du);
+  const mia = spawnBlock('mia', { x: MIA.x, y: MIA.y, z: MIA.z, ry: Math.atan2(DU.x - MIA.x, DU.z - MIA.z) }); scene.add(mia);
+  let focus;
+  if (shot === 'strasse') {
+    play(du, mm, 'Texting', qn('tdu', 2.0)); du.userData.blockFace.set('neutral', { look: [0, 0.6] });
+    play(mia, mf, 'Talk with gestures', qn('tmia', 1.5)); mia.userData.blockFace.set('happy', { talk: 0.6 });
+    focus = du.userData.bones.Head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.15, 0));
+    stage.limitLights(focus, 8);
+    stage.view({ pos: [qn('cx', 3.05), qn('cy', 1.62), qn('cz', 4.35)], target: [qn('tx', 5.75), qn('ty', 1.25), qn('tz', 2.55)], fov: qn('fov', 44) });
+  } else {
+    // Nahaufnahme von Du (Gesicht), Mia im Hintergrund
+    play(du, mm, shot === 'peinlich' ? 'Idle' : (Q.get('move') || 'Talk with gestures'), qn('tdu', 1.2));
+    play(mia, mf, 'Laugh', 1.0); mia.userData.blockFace.set('laugh');
+    if (shot === 'peinlich') { du.userData.blockFace.set('awkward'); du.userData.blush(1); } else du.userData.blockFace.set(Q.get('expr') || 'happy', { talk: qn('talk', 0) });
+    du.rotation.y = 0.35; du.updateMatrixWorld(true);
+    const hp = du.userData.bones.Head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.12, 0));
+    focus = hp; stage.limitLights(focus, 8);
+    const yaw = 0.35 + qn('yaw', 10) * Math.PI / 180, dist = qn('dist', 1.25);
+    stage.view({ pos: [hp.x + Math.sin(yaw) * dist, hp.y + 0.08, hp.z + Math.cos(yaw) * dist], target: [hp.x, hp.y - 0.12, hp.z], fov: qn('fov', 36) });
+  }
+  stage.build({ focus }).ready();
+}
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>
