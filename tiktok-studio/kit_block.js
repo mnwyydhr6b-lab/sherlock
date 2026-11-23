@@ -78,6 +78,16 @@ function drawFace(spec, name, { blink = 0, talk = 0, look = null, blush = 0 } = 
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
+// ---------------------------------------------------------------- Risse (Selbstrespekt sinkt)
+function crackTex(seed) {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'); let s = seed * 9301 + 49297; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const line = (x, y, a, len, w, depth) => { const pts = [[x, y]]; let cx = x, cy = y, ca = a;
+    for (let i = 0; i < 5; i++) { ca += (r() < 0.5 ? -1 : 1) * (0.35 + r() * 0.45); cx += Math.cos(ca) * len / 5; cy += Math.sin(ca) * len / 5; pts.push([cx, cy]); if (depth < 1 && r() < 0.3) line(cx, cy, ca + (r() < 0.5 ? 1.0 : -1.0), len * 0.4, w * 0.65, depth + 1); }
+    for (const [col, off, lw] of [['rgba(255,240,225,0.6)', 2.5, w * 0.8], ['rgba(30,15,10,0.95)', 0, w]]) { g.strokeStyle = col; g.lineWidth = lw; g.lineJoin = g.lineCap = 'round'; g.beginPath(); pts.forEach(([px, py], i) => i ? g.lineTo(px + off, py + off) : g.moveTo(px + off, py + off)); g.stroke(); } };
+  for (let i = 0; i < 3; i++) { const edge = Math.floor(r() * 4), u = 0.15 + r() * 0.7; const [x, y, a] = [[u * S, 0, Math.PI / 2], [S, u * S, Math.PI], [u * S, S, -Math.PI / 2], [0, u * S, 0]][edge]; line(x, y, a + (r() - 0.5) * 0.6, S * (0.4 + r() * 0.3), 11, 0); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
 // ---------------------------------------------------------------- Figur bauen
 export function spawnBlock(name, o = {}) {
   const spec = { ...BLOCK_CAST[name], ...(o.spec || {}) };
@@ -141,6 +151,13 @@ export function spawnBlock(name, o = {}) {
     seg('thigh_' + s, hp, kn, 0.15, 0.16, mPants, 0.04, 0.02); seg('calf_' + s, kn, an, 0.135, 0.14, mPants, 0.02, -0.01);
     const sc = new THREE.Vector3((an.x + ball.x) / 2, 0.055, (an.z + ball.z) / 2 + 0.02);
     put('foot_' + s, rbox(0.13, 0.09, 0.27, 0.03, 3), mShoe, sc); put('foot_' + s, rbox(0.134, 0.025, 0.275, 0.01, 2), mSole, sc.clone().setY(0.014)); }
+  // Riss-Folien (unsichtbar, bis ud.crack(k) sie einblendet)
+  const crackPlanes = []; const crackOn = (bone, w, hgt, pos, rotY, seed) => { const m = new THREE.MeshStandardMaterial({ map: crackTex(seed), transparent: true, opacity: 0, roughness: 0.7, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
+    const pl = put(bone, new THREE.PlaneGeometry(w, hgt), m, pos, { rot: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rotY, 0)), cast: false }); pl.visible = false; crackPlanes.push(pl); };
+  crackOn('Head', HS * 0.92, HS * 0.92, hc.clone().add(new THREE.Vector3(0, 0, HS * 0.47 + 0.003)), 0, 3);
+  crackOn('Head', HS * 0.85, HS * 0.8, hc.clone().add(new THREE.Vector3(HS * 0.5 + 0.002, -HS * 0.06, 0)), Math.PI / 2, 7);
+  crackOn('Head', HS * 0.85, HS * 0.8, hc.clone().add(new THREE.Vector3(-HS * 0.5 - 0.002, -HS * 0.06, 0)), -Math.PI / 2, 11);
+  crackOn('spine_02', TW * 0.86, (tTop - tBot) * 0.8, new THREE.Vector3(0, tc.y + 0.02, fz + 0.006), 0, 17);
   // Pose wiederherstellen
   for (const [x, [p, q, s]] of saved) { x.position.copy(p); x.quaternion.copy(q); x.scale.copy(s); }
   h.position.copy(saveP); h.quaternion.copy(saveQ); h.updateMatrixWorld(true);
@@ -151,6 +168,21 @@ export function spawnBlock(name, o = {}) {
     let t = cache.get(key); if (!t) { t = drawFace(spec, name, { ...opt, blink: (opt.blink || 0) > 0.5 ? 1 : 0, talk: Math.round((opt.talk || 0) * 3) / 3, blush: Math.max(blushV, opt.blush || 0) }); cache.set(key, t); }
     if (faceMat.map !== t) { faceMat.map = t; faceMat.needsUpdate = true; } } };
   ud.blush = (v) => { blushV = v; mSkin.emissive = new THREE.Color(0xff3040); mSkin.emissiveIntensity = 0.12 * v; };
+  ud.crack = (k) => { for (const p of crackPlanes) { p.visible = k > 0.01; p.material.opacity = Math.min(1, k); } };
+  // Blöcke abfallen lassen: gibt update(t) zurück (deterministisch, ab Zeitpunkt t0)
+  ud.dropChips = (scene, t0, { n = 7, from = ['Head', 'clavicle_l', 'clavicle_r', 'spine_03'], seed = 5 } = {}) => {
+    let s = seed * 7919 + 13; const r = () => (s = (s * 16807) % 2147483647) / 2147483647; const chips = [];
+    for (let i = 0; i < n; i++) { const bone = from[i % from.length], sz = 0.035 + r() * 0.035; const col = bone === 'Head' ? (r() < 0.5 ? spec.skin : spec.hair) : spec.shirt;
+      const m = new THREE.Mesh(rbox(sz, sz, sz, sz * 0.2, 2), toy(col)); m.castShadow = true; m.visible = false; scene.add(m);
+      chips.push({ m, bone, off: new THREE.Vector3((r() - 0.5) * 0.22, 0.05 + r() * 0.22, (r() - 0.5) * 0.16), v: new THREE.Vector3((r() - 0.5) * 1.4, 0.6 + r() * 1.2, 0.3 + r() * 0.8), spin: new THREE.Vector3(r() * 9, r() * 9, r() * 9), delay: r() * 0.35, sz }); }
+    let start = null;
+    return (t) => { for (const c of chips) { const tt = t - t0 - c.delay; if (tt < 0) { c.m.visible = false; continue; }
+        if (!c.p0) { h.updateMatrixWorld(true); c.p0 = b[c.bone].localToWorld(c.off.clone()); c.ground = h.position.y + c.sz / 2; }
+        c.m.visible = true; let y = c.p0.y + c.v.y * tt - 4.9 * tt * tt, x = c.p0.x + c.v.x * tt, z = c.p0.z + c.v.z * tt;
+        if (y < c.ground) { // einmal aufprallen, dann liegen bleiben
+          const tHit = (c.v.y + Math.sqrt(c.v.y * c.v.y + 19.6 * (c.p0.y - c.ground))) / 9.8; const t2 = tt - tHit; const vb = (c.v.y - 9.8 * tHit) * -0.3;
+          y = Math.max(c.ground, c.ground + vb * t2 - 4.9 * t2 * t2); x = c.p0.x + c.v.x * (tHit + Math.min(t2, 0.4) * 0.5); z = c.p0.z + c.v.z * (tHit + Math.min(t2, 0.4) * 0.5); }
+        c.m.position.set(x, y, z); const k = Math.min(tt, 1.2); c.m.rotation.set(c.spin.x * k, c.spin.y * k, c.spin.z * k); } }; };
   ud.blockParts = parts; ud.blockSpec = spec;
   return h;
 }
