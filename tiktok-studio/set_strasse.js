@@ -80,6 +80,19 @@ export async function buildStrasse(stage, o = {}) {
       door: { x: 0, w: 1.1, h: 2.1, color: 0x2b2f34, glassTile: TILE.stairs, number: 6 + seed * 2, lampIntensity: day ? 0 : 2.0 }, chimney: [2.5, -1] });
     h.rotation.y = Math.PI / 2; h.position.set(-(13.0 + 4.25), SW, z); scene.add(h); }
 
+  // ---------------- weitere Häuser auf beiden Seiten (einfacher gebaut), damit die Straße durchgehend bebaut ist
+  { const walls = [0xf2eadb, 0xe6ddcf, 0xdde4e6, 0xefe2c4, 0xe8d6c6, 0xd9dccf, 0xf0e8e0], roofs = [0x7a3a2a, 0x3a3d42, 0x5a3a2e, 0x8a3f2e, 0x4a4f57, 0x6b2f26];
+    const tiles = [TILE.warm, TILE.tv, TILE.kitchen, TILE.dark, TILE.warm2, TILE.stairs, TILE.darkCurtain];
+    const simple = (seed, side, z) => { const r = makeRng(seed * 13 + 7), pick = (a) => a[Math.floor(r() * a.length)];
+      const t = () => (r() < 0.32 && !day ? TILE.dark : pick(tiles));
+      const h = makeHouse({ seed, w: 9 + r() * 2.5, d: 8.5, floors: 2, fh: 2.7, pitch: 36 + r() * 12, wall: pick(walls), roof: pick(roofs),
+        front: [{ x: -2.7, y: 1.3, w: 1.4, h: 1.3, tile: t() }, { x: 2.7, y: 1.3, w: 1.4, h: 1.3, tile: t() }, { x: -2.7, y: 3.95, w: 1.2, h: 1.3, tile: t(), shutter: r() < 0.4 ? 1 : 0 }, { x: 2.7, y: 3.95, w: 1.2, h: 1.3, tile: t(), shutter: r() < 0.3 ? 0.5 : 0 }],
+        door: { x: 0, w: 1.1, h: 2.1, color: pick([0x2b2f34, 0x6b4a2e, 0x8a1f1f, 0x2a4a3a]), glassTile: TILE.stairs, number: seed, lampIntensity: day ? 0 : 1.6 }, chimney: r() < 0.6 ? [2.4, -1] : null, garage: r() < 0.35 ? { w: 3.2, d: 6.2 } : null });
+      h.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2; h.position.set(side * (13.0 + 4.25), SW, z); scene.add(h);
+      const hd = makeHedge(7.5, 0.8, 0.55, { seed: seed + 3 }); hd.rotation.y = Math.PI / 2; hd.position.set(side * 6.25, SW, z + (r() - 0.5) * 2); scene.add(hd); };
+    let sd = 11; for (const z of [-84, -63, -42, 41.5, 62]) simple(sd++, 1, z);
+    for (const z of [-83, -62, -41, 43, 64]) simple(sd++, -1, z); }
+
   // ---------------- party lot (Garten Nr. 7)
   const P = { gateZ: 3.0, fenceX: 6.25 };
   add(scene, new THREE.PlaneGeometry(7.4, 3.4), pfl, 6.0 + 3.7, SW + 0.006, -6.9, { rx: -Math.PI / 2, cast: false });
@@ -119,7 +132,11 @@ export async function buildStrasse(stage, o = {}) {
   const carPaint = (ob, col) => ob.traverse(m => { if (!m.isMesh) return; m.castShadow = m.receiveShadow = true; const n = (m.material.name || '').toLowerCase();
     if (/glass|window/.test(n)) m.material = new THREE.MeshPhysicalMaterial({ color: 0x0c1016, roughness: 0.05, metalness: 0.2 });
     else if (/body|paint|main|car/.test(n) || m.material.color.getHSL({}).s > 0.25) m.material = new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.32, metalness: 0.45, clearcoat: 1, clearcoatRoughness: 0.08 }); });
-  for (const [k, x, z, ry, col] of (o.cars ?? [['n1', -2.4, -6.5, Math.PI, 0x2a4f7a], ['n2', -2.4, 12, Math.PI, 0xc9c9c9], ['suv', -2.4, -22, Math.PI, 0x7a1f22], ['n1', 2.4, -14.5, 0, 0x30343a], ['n2', 2.4, 19, 0, 0x4a5a3a], ['suv', 9.0, -6.9, -Math.PI / 2, 0x1d1f24]])) {
+  const parked = [['n1', -2.4, -6.5, Math.PI, 0x2a4f7a], ['n2', -2.4, 12, Math.PI, 0xc9c9c9], ['suv', -2.4, -22, Math.PI, 0x7a1f22], ['n1', 2.4, -14.5, 0, 0x30343a], ['n2', 2.4, 19, 0, 0x4a5a3a], ['suv', 9.0, -6.9, -Math.PI / 2, 0x1d1f24],
+    // weitere parkende Autos an beiden Straßenrändern
+    ['n2', -2.4, -33, Math.PI, 0x8a8f96], ['n1', -2.4, -47, Math.PI, 0x1f3a5a], ['suv', -2.4, -60, Math.PI, 0x2b2b30], ['n1', -2.4, 26, Math.PI, 0x6a1f1f], ['suv', -2.4, 39, Math.PI, 0xd8d8d8], ['n2', -2.4, 54, Math.PI, 0x2f4a3a],
+    ['suv', 2.4, -28, 0, 0xc8c2b4], ['n2', 2.4, -41, 0, 0x7a2a2a], ['n1', 2.4, -55, 0, 0x5a6a7a], ['n1', 2.4, 31, 0, 0x1d1f24], ['n2', 2.4, 46, 0, 0x3a5a8a], ['suv', 2.4, 60, 0, 0x4a4a4e]];
+  for (const [k, x, z, ry, col] of (o.cars ?? parked)) {
     const ob = cars[k].scene.clone(true); ob.position.set(x, x > 6 ? SW : 0, z); ob.rotation.y = ry; carPaint(ob, col); scene.add(ob); }
 
   // ---------------- party props

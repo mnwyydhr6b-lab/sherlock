@@ -85,7 +85,8 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 - Die Serie wird **aus der Sicht von „Du“** erzählt: Der Zuschauer sieht, was Du sieht. Du selbst sieht man nicht (höchstens Hände, Handy und Hoodie, wenn er nach unten schaut).
 - `povHide(du)` blendet Kopf und Haare von Du aus. Kamera pro Frame mit `povPose(du, …)` → `{ eye, dir }`:
   - Gehen/Stehen: `povPose(du, { steady: true, pitch: -0.06, bob: 0.012, t })` – ruhige Kamera auf Augenhöhe, leichtes Wippen beim Gehen
-  - Kopf folgt der Animation: `povPose(du)`; Blick aufs Handy: Richtung auf `du.getObjectByName('AraPhone_l')` (+9 cm nach oben) setzen
+  - Kopf folgt der Animation: `povPose(du)`
+  - **Handy wie in Spielen:** `const ph = povPhoneRig(stage, du, { screen: partyStoryTex() })`, pro Frame `ph.set(k)` (0 = unten aus dem Bild, 1 = hochkant vor dir, Bildschirm zu dir, Klötzchen-Hände halten es). Eigene Bildschirm-Inhalte als Canvas-Textur übergeben (Vorlage: `partyStoryTex()` in `kit_block.js`). Dabei die Kamera nur leicht nach unten neigen.
   - Blick zu Personen: `dir` zum Kopf/Gesicht der Person hin mischen (die anderen reagieren mit ihren Gesichtern)
   - Übergänge mit `smooth()` zwischen den Blickrichtungen mischen (siehe `clip_test.html`), Bildwinkel 60–70
   - Schnell testen: `pov_test.html?shot=leute|handy`
@@ -123,7 +124,7 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 ## 5. Sets und wichtige Punkte (Anker)
 
 **Straße (`set_strasse.js`)**
-- Straße entlang z. Partyhaus rechts, Haustür bei (12.5 / 0.4).
+- Straße entlang z, auf beiden Seiten durchgehend bebaut (Partyhaus Nr. 7 rechts, Haustür bei (12.5 / 0.4), dazu einfachere Nachbarhäuser mit Hecken) und an beiden Straßenrändern parkende Autos (eigene Liste über die Option `cars`).
 - Anker im Objekt `ANCHOR`: `gate`, `heroAtGate`, `door`, `doorStep`, `yard`, `sidewalkR(z)`, `sidewalkL(z)`.
 - Option `party: false` liefert eine normale Nacht ohne Deko. Mit Preset `tag` ist es dieselbe Straße bei Tag.
 

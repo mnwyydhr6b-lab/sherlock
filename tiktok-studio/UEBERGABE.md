@@ -88,7 +88,7 @@
   Danach mit PIL (Lanczos) von 2160×3840 auf 1080×1920 verkleinern.
 - Video rendern:
   - Befehl: `node render.js clip_test.html <ordner> <sekunden> 24` → JPG-Bildfolge, danach mit ffmpeg zu MP4 (komplett: `./make_clip_test.sh`).
-  - **Vorlage für jede Folge: `clip_test.html`** (9,6-s-Testclip in Ego-Perspektive mit Klötzchen: Du geht zur Party, bleibt am Tor stehen und schaut zu den Gästen, deren Gesichter umschlagen, der Zähler fällt, dann Blick aufs Handy in seinen Händen (`Ara:Texting`); Zähler und Untertitel).
+  - **Vorlage für jede Folge: `clip_test.html`** (10-s-Testclip in Ego-Perspektive mit Klötzchen: Du geht die bebaute Straße entlang zur Party, bleibt am Tor stehen und schaut zu den Gästen, deren Gesichter umschlagen, der Zähler fällt, dann holt er das Handy hoch – hochkant vor dir, Leons Story auf dem Bildschirm (`povPhoneRig`); Zähler und Untertitel).
   - `kit_anim.js`:
     - `Actor`: Animationen mit Überblendung, Laufweg, Drehung, `after`-Hook für Kopf/IK
     - `clipSpeed`: Laufgeschwindigkeit messen, damit die Füße nicht rutschen
@@ -130,7 +130,7 @@
 - `kit_look.js` – `createStage({ preset })`: Renderer, Himmel, Licht und Nachbearbeitung als feste Presets.
   - Presets: `nacht`, `abend`, `tag`, `innen_nacht`, `innen_tag`, `studio`
   - Methoden: `view()`, `build({ focus })`, `aimKey()`, `ready()`
-- `kit_block.js` – **die Figuren der Serie:** `spawnBlock(name)`, Gesicht `blockFace.set()`, Bewegungen `loadBlockMoves()` / `playMove()` / `prepMoves()` / `syncPhone()`, Ego-Perspektive `povHide()` / `povPose()` / `povCamera()`. Details in `LOOK_BIBEL.md`.
+- `kit_block.js` – **die Figuren der Serie:** `spawnBlock(name)`, Gesicht `blockFace.set()`, Bewegungen `loadBlockMoves()` / `playMove()` / `prepMoves()` / `syncPhone()`, Ego-Perspektive `povHide()` / `povPose()` / `povCamera()` / `povPhoneRig()` (Handy vor der Kamera wie in Spielen). Details in `LOOK_BIBEL.md`.
 - `kit_retarget.js` + `assets/moves/` – 26 Motion-Capture-Bewegungen (Ara3D-Bibliothek, CMU-Mocap, kommerziell nutzbar) werden auf unser Skelett übertragen. Neu erzeugen: `./make_moves.sh` (braucht npm und GitHub).
 - `kit_cast.js` – Skelett/Grunddaten der Besetzung (`spawn` wird intern von `spawnBlock` genutzt), plus Posen-Helfer:
   - `posePhone` (Handy halten), `holdCup` (Becher halten), `sitOn` (sitzen)

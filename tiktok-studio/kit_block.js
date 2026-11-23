@@ -195,3 +195,37 @@ export function povCamera(stage, h, { look = null, k = 0, fov = 64, ...o } = {})
   const cam = stage.camera; cam.position.copy(eye); cam.up.set(0, 1, 0); cam.lookAt(eye.clone().add(dir)); cam.fov = fov; cam.near = 0.03; cam.updateProjectionMatrix();
   return eye;
 }
+
+// Handy in der Ego-Perspektive (wie in Spielen): hochkant vor der Kamera, Bildschirm zu dir, deine Klötzchen-Hände halten es von unten.
+// const ph = povPhoneRig(stage, du, { screen: canvasTextur }); pro Frame: ph.set(k)  (k 0 = unten aus dem Bild, 1 = vor dir)
+export function povPhoneRig(stage, h, { screen = null, screenColor = 0x9ad0ff, tilt = -0.32 } = {}) {
+  const spec = h.userData.blockSpec, cam = stage.camera; if (!cam.parent) stage.scene.add(cam);
+  const g = new THREE.Group(); g.name = 'PovPhone'; const ph = new THREE.Group(); ph.rotation.x = tilt; g.add(ph);
+  const mk = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = false; m.receiveShadow = true; m.frustumCulled = false; return m; };
+  ph.add(mk(rbox(0.074, 0.152, 0.01, 0.009, 3), new THREE.MeshPhysicalMaterial({ color: 0x141418, roughness: 0.28, clearcoat: 1 }), 0, 0, 0));
+  ph.add(mk(new THREE.PlaneGeometry(0.066, 0.142), new THREE.MeshBasicMaterial({ color: screen ? 0xffffff : screenColor, map: screen, toneMapped: false }), 0, 0, 0.0052));
+  const skin = toy(shade(spec.skin, 0.8), { clearcoat: 0.1 }), sleeve = toy(spec.shirt), cuff = toy(shade(spec.shirt, 0.82));
+  // linke Hand hält das Handy von hinten unten, rechte Hand von rechts, Daumen am Bildschirm
+  ph.add(mk(rbox(0.09, 0.075, 0.045, 0.014, 3), skin, -0.012, -0.075, -0.028, 0.25, 0, 0.18));
+  ph.add(mk(rbox(0.024, 0.05, 0.026, 0.009, 2), skin, -0.047, -0.058, 0.002, 0, 0, -0.45));
+  ph.add(mk(rbox(0.065, 0.08, 0.048, 0.014, 3), skin, 0.06, -0.075, -0.014, 0.1, 0, -0.25));
+  ph.add(mk(rbox(0.022, 0.05, 0.024, 0.008, 2), skin, 0.036, -0.052, 0.01, 0.15, 0, 0.6));
+  // Ärmel laufen nach unten aus dem Bild
+  ph.add(mk(rbox(0.11, 0.3, 0.11, 0.025, 3), sleeve, -0.07, -0.26, -0.06, 0.55, 0, 0.32)); ph.add(mk(rbox(0.118, 0.04, 0.118, 0.015, 2), cuff, -0.03, -0.125, -0.045, 0.55, 0, 0.32));
+  ph.add(mk(rbox(0.11, 0.3, 0.11, 0.025, 3), sleeve, 0.12, -0.25, -0.05, 0.5, 0, -0.42)); ph.add(mk(rbox(0.118, 0.04, 0.118, 0.015, 2), cuff, 0.085, -0.115, -0.035, 0.5, 0, -0.42));
+  const glow = new THREE.PointLight(0xffc8e8, 0.025, 0.5, 2); glow.position.set(0, 0.02, 0.1); ph.add(glow);
+  cam.add(g); g.visible = false;
+  const down = new THREE.Vector3(0.02, -0.5, -0.33), up = new THREE.Vector3(0.0, -0.085, -0.33);
+  return { group: g, set(k) { g.visible = k > 0.005; const s = k * k * (3 - 2 * k); g.position.lerpVectors(down, up, s); g.rotation.z = (1 - s) * 0.18; } };
+}
+// Bildschirm-Inhalt: Story von Leon (Party heute), für Handy-Szenen
+export function partyStoryTex() {
+  const c = document.createElement('canvas'); c.width = 330; c.height = 710; const g = c.getContext('2d');
+  const bg = g.createLinearGradient(0, 0, 0, 710); bg.addColorStop(0, '#2a1a5e'); bg.addColorStop(0.55, '#a03a9a'); bg.addColorStop(1, '#ff7aa8'); g.fillStyle = bg; g.fillRect(0, 0, 330, 710);
+  for (let i = 0; i < 40; i++) { g.fillStyle = `hsla(${(i * 47) % 360},90%,70%,0.8)`; g.fillRect((i * 83) % 330, (i * 131) % 710, 8, 4); }
+  g.fillStyle = 'rgba(255,255,255,0.9)'; for (let i = 0; i < 3; i++) g.fillRect(14 + i * 103, 14, 97, 4);
+  g.fillStyle = '#ffd36a'; g.beginPath(); g.arc(40, 52, 18, 0, 6.28); g.fill(); g.fillStyle = '#fff'; g.font = 'bold 20px Inter, sans-serif'; g.textBaseline = 'middle'; g.fillText('leon_07', 68, 52);
+  g.textAlign = 'center'; g.font = '800 54px Inter, sans-serif'; g.fillText('PARTY', 165, 300); g.fillText('HEUTE', 165, 360); g.font = 'bold 26px Inter, sans-serif'; g.fillText('Lindenweg 7 · ab 21 Uhr', 165, 420);
+  g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(20, 640, 290, 46); g.fillStyle = 'rgba(255,255,255,0.8)'; g.font = '20px Inter, sans-serif'; g.fillText('Nachricht senden …', 165, 664);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
