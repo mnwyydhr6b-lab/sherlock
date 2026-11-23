@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1920px;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Ego-Perspektive: alles aus der Sicht von „Du“. Selbstrespekt-Effekt sichtbar als Glas-Sprünge im Bild,
+// Risse und abbröckelnde Blöcke an den eigenen Händen, roter Rand, und die Gesichter der anderen.
+// pov_test.html?shot=handy|leute&lvl=2
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { buildStrasse, SW } from './set_strasse.js';
+import { loadHumanAssets, lookAt, faceTo } from './kit_cast.js';
+import { spawnBlock, loadBlockMoves, playMove, povHide, povCamera } from './kit_block.js';
+import { createHUD } from './kit_hud.js';
+const stage = createStage({ preset: 'nacht' });
+const { scene, qn, Q } = stage;
+const shot = Q.get('shot') || 'leute', lvl = qn('lvl', 2);
+async function main() {
+  await buildStrasse(stage, { party: true });
+  await loadHumanAssets(); await loadBlockMoves();
+  const du = spawnBlock('du', { anim: 'Idle_Loop', time: 1.0, x: 6.2, y: SW, z: 1.6, ry: 1.45 }); scene.add(du); povHide(du);
+  const guests = [
+    ['leon', 'Idle_Talking_Loop', 9.6, 1.9, 'sideeye'], ['mia', 'Idle_Loop', 9.2, 0.7, 'awkward'], ['jasmin', 'Idle_Loop', 10.2, 0.9, 'laugh'], ['tarik', 'Idle_FoldArms_Loop', 10.4, 2.4, 'smirk'],
+  ].map(([n, a, x, z, e], i) => { const g = spawnBlock(n, { anim: a, time: 0.6 + i * 0.4, x, y: SW, z }); scene.add(g); faceTo(g, du.position); g.userData.blockFace.set(e, { look: [-0.2, 0] }); return g; });
+  if (shot === 'handy') { playMove(du, 'Texting', 2.2); du.userData.crack(1); const fall = du.userData.dropChips(scene, 0, { n: 6, from: ['hand_l', 'hand_r', 'lowerarm_l', 'lowerarm_r'] }); fall(qn('tc', 0.28)); }
+  else { du.updateMatrixWorld(true); lookAt(du, new THREE.Vector3(9.8, SW + 1.55, 1.4), 1); }
+  const eye = povCamera(stage, du, { fov: shot === 'handy' ? qn('pfov', 72) : 62, pitch: shot === 'handy' ? qn('pitch', -0.55) : 0 });
+  const hud = await createHUD(); hud.loc('LINDENWEG · 22:47'); hud.counter(qn('v', 55), 0); hud.cracks(lvl, 1); hud.redEdge(qn('red', 0.6));
+  stage.limitLights(eye, 8);
+  stage.build({ focus: shot === 'handy' ? du.userData.bones.hand_l.getWorldPosition(new THREE.Vector3()) : guests[0].userData.bones.Head.getWorldPosition(new THREE.Vector3()) }).ready();
+}
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>

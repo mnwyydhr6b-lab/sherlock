@@ -106,7 +106,7 @@ export function spawnBlock(name, o = {}) {
   const saveP = h.position.clone(), saveQ = h.quaternion.clone(); h.position.set(0, 0, 0); h.quaternion.identity();
   ud.mixer.stopAllAction(); sk.pose(); h.updateMatrixWorld(true);
   const P = (n) => b[n].getWorldPosition(new THREE.Vector3());
-  const parts = [];
+  const parts = []; ud.headBindQ = b.Head.getWorldQuaternion(new THREE.Quaternion());
   const put = (bone, geo, mat, pos, { rot = null, cast = true } = {}) => { const m = new THREE.Mesh(geo, mat); m.userData.block = true; m.castShadow = cast; m.receiveShadow = true; m.position.copy(pos); if (rot) m.quaternion.copy(rot);
     m.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(b[bone].matrixWorld).invert(); m.applyMatrix4(inv); b[bone].add(m); parts.push(m); return m; };
   const along = (a, c) => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().sub(a).normalize());
@@ -165,6 +165,12 @@ export function spawnBlock(name, o = {}) {
   crackOn('Head', HS * 0.85, HS * 0.8, hc.clone().add(new THREE.Vector3(HS * 0.5 + 0.002, -HS * 0.06, 0)), Math.PI / 2, 7);
   crackOn('Head', HS * 0.85, HS * 0.8, hc.clone().add(new THREE.Vector3(-HS * 0.5 - 0.002, -HS * 0.06, 0)), -Math.PI / 2, 11);
   crackOn('spine_02', TW * 0.86, (tTop - tBot) * 0.8, new THREE.Vector3(0, tc.y + 0.02, fz + 0.006), 0, 17);
+  // Hände und Unterarme (Ego-Perspektive: die eigenen Hände sieht man), Ober- und Unterseite
+  const crackFlat = (bone, a, c, w, off, seed) => { for (const sgn of [1, -1]) { const m = new THREE.MeshStandardMaterial({ map: crackTex(seed + (sgn > 0 ? 0 : 50)), transparent: true, opacity: 0, roughness: 0.7, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
+    const dir = c.clone().sub(a).normalize(); const len = a.distanceTo(c); const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(sgn * Math.PI / 2, 0, 0)));
+    const nrm = new THREE.Vector3(0, 0, 1).applyQuaternion(q); const pl = put(bone, new THREE.PlaneGeometry(w * 0.92, len * 0.9), m, a.clone().lerp(c, 0.5).addScaledVector(nrm, off), { rot: q, cast: false }); pl.visible = false; crackPlanes.push(pl); } };
+  for (const s of ['l', 'r']) { const el = P('lowerarm_' + s), wr = P('hand_' + s), mid = P('middle_01_' + s); const hd = mid.clone().sub(wr).normalize();
+    crackFlat('hand_' + s, wr, wr.clone().addScaledVector(hd, 0.1), 0.085, 0.052, 23 + (s === 'l' ? 0 : 3)); crackFlat('lowerarm_' + s, el, wr, 0.11, 0.057, 31 + (s === 'l' ? 0 : 3)); }
   // Pose wiederherstellen
   for (const [x, [p, q, s]] of saved) { x.position.copy(p); x.quaternion.copy(q); x.scale.copy(s); }
   h.position.copy(saveP); h.quaternion.copy(saveQ); h.updateMatrixWorld(true);
@@ -179,7 +185,7 @@ export function spawnBlock(name, o = {}) {
   // Blöcke abfallen lassen: gibt update(t) zurück (deterministisch, ab Zeitpunkt t0)
   ud.dropChips = (scene, t0, { n = 7, from = ['Head', 'clavicle_l', 'clavicle_r', 'spine_03'], seed = 5 } = {}) => {
     let s = seed * 7919 + 13; const r = () => (s = (s * 16807) % 2147483647) / 2147483647; const chips = [];
-    for (let i = 0; i < n; i++) { const bone = from[i % from.length], sz = 0.035 + r() * 0.035; const col = bone === 'Head' ? (r() < 0.5 ? spec.skin : spec.hair) : spec.shirt;
+    for (let i = 0; i < n; i++) { const bone = from[i % from.length], sz = 0.035 + r() * 0.035; const col = bone === 'Head' ? (r() < 0.5 ? spec.skin : spec.hair) : bone.startsWith('hand') ? spec.skin : spec.shirt;
       const m = new THREE.Mesh(rbox(sz, sz, sz, sz * 0.2, 2), toy(col)); m.castShadow = true; m.visible = false; scene.add(m);
       chips.push({ m, bone, off: new THREE.Vector3((r() - 0.5) * 0.22, 0.05 + r() * 0.22, (r() - 0.5) * 0.16), v: new THREE.Vector3((r() - 0.5) * 1.4, 0.6 + r() * 1.2, 0.3 + r() * 0.8), spin: new THREE.Vector3(r() * 9, r() * 9, r() * 9), delay: r() * 0.35, sz }); }
     let start = null;
@@ -208,3 +214,18 @@ export function prepMoves(h, names) { if (!MOVES) throw new Error('zuerst await 
 export function playMove(h, name, t = 1) { const [c] = prepMoves(h, [name]); const mx = h.userData.mixer; mx.stopAllAction(); mx.clipAction(c).play(); mx.setTime(t); h.userData.applyBuild(); showPhone(h, !!c.userData.phone); h.updateMatrixWorld(true); return c; }
 // Video: Handy nur zeigen, solange eine Handy-Bewegung (Texting, Phone call) überwiegt – jedes Frame nach actor.update(t) aufrufen
 export function syncPhone(h) { let on = false; for (const a of h.userData.mixer._actions) { const c = a.getClip(); if (c.userData && c.userData.phone && a.getEffectiveWeight() > 0.5) on = true; } showPhone(h, on); }
+
+// ---------------------------------------------------------------- Ego-Perspektive (die Serie wird aus der Sicht von „Du“ erzählt)
+// Kopf, Haare und Gesicht von „Du“ ausblenden (der Rest – Hoodie, Arme, Hände – bleibt im Bild, wenn man nach unten schaut)
+export function povHide(h, on = true) { const head = h.userData.bones.Head; head.traverse(o => { if (o.isMesh && o.userData.block) o.visible = !on; }); }
+// Kamera in die Augen von „Du“ setzen; Blickrichtung folgt dem Kopf (aus der Animation). Optional: look = Weltpunkt, k = Anteil zum Punkt.
+export function povCamera(stage, h, { forward = 0.11, up = 0.17, look = null, k = 0, fov = 64, pitch = 0 } = {}) {
+  h.updateMatrixWorld(true); const hb = h.userData.bones.Head; const q = hb.getWorldQuaternion(new THREE.Quaternion()).multiply(h.userData.headBindQ.clone().invert());
+  const f = new THREE.Vector3(0, 0, 1).applyQuaternion(q), u = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+  const eye = hb.getWorldPosition(new THREE.Vector3()).addScaledVector(u, up).addScaledVector(f, forward);
+  let dir = f.clone(); if (pitch) dir.applyAxisAngle(new THREE.Vector3().crossVectors(f, u).normalize(), pitch);
+  if (look && k > 0) dir.lerp(look.clone().sub(eye).normalize(), k).normalize();
+  const cam = stage.camera; cam.position.copy(eye); cam.up.set(0, 1, 0); cam.lookAt(eye.clone().add(dir)); if (cam.fov !== fov) { cam.fov = fov; cam.updateProjectionMatrix(); } cam.near = 0.03; cam.updateProjectionMatrix();
+  return eye;
+}
+
