@@ -39,6 +39,7 @@ const FACES = {
   smirk:    { brow: [0.02, -0.12], eye: 0.85, mouth: 'smirk' },
   sideeye:  { brow: [-0.04, -0.15], eye: 0.8, mouth: 'flat_side', look: [0.35, 0] },
   shocked:  { brow: [0.25, 0.1], eye: 1.3, mouth: 'big_o' },
+  cool:     { brow: [-0.03, -0.22], eye: 1, lid: 0.42, mouth: 'smirk' }, // lässig/souverän: halb geschlossene Lider, Grinsen (Profilbild „Aura“)
 };
 function drawFace(spec, name, { blink = 0, talk = 0, look = null, blush = 0 } = {}) {
   const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
@@ -55,6 +56,11 @@ function drawFace(spec, name, { blink = 0, talk = 0, look = null, blush = 0 } = 
     const ix = cx + lk[0] * er * 0.45, iy = ey + lk[1] * er * 0.4; g.fillStyle = '#' + new THREE.Color(spec.eyes).getHexString(); g.beginPath(); g.ellipse(ix, iy, er * 0.58, Math.min(h, er * 0.62), 0, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#120c0a'; g.beginPath(); g.ellipse(ix, iy, er * 0.3, Math.min(h * 0.9, er * 0.34), 0, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#ffffff'; g.beginPath(); g.arc(ix - er * 0.22, iy - er * 0.24, er * 0.17, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(ix + er * 0.2, iy + er * 0.18, er * 0.07, 0, Math.PI * 2); g.fill();
+    if (F.lid) { // Oberlid: oberen Teil des Auges wegschneiden, Lidkante als Linie, kleiner Glanzpunkt darunter
+      const top = ey - h - 2, cut = ey - h + 2 * h * F.lid; g.save(); g.globalCompositeOperation = 'destination-out'; g.fillRect(cx - er * 1.15, top, er * 2.3, cut - top); g.restore();
+      const yy = (cut - ey) / h, hw = er * 0.92 * Math.sqrt(Math.max(0, 1 - yy * yy)) + er * 0.1;
+      g.strokeStyle = ink; g.lineWidth = 0.032 * S; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - hw, cut + sx * er * 0.05); g.quadraticCurveTo(cx, cut - er * 0.05, cx + hw, cut - sx * er * 0.05); g.stroke();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(ix - er * 0.18, cut + er * 0.22, er * 0.12, 0, Math.PI * 2); g.fill(); }
     if (spec.lashes) { g.strokeStyle = ink; g.lineWidth = 0.014 * S; g.beginPath(); g.ellipse(cx, ey, er * 0.95, h * 1.02, 0, Math.PI * 1.08, Math.PI * 1.92); g.stroke(); }
     if (blink > 0 && blink < 1) { g.fillStyle = 'rgba(0,0,0,0)'; } }
   // Brauen

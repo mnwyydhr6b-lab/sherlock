@@ -57,7 +57,7 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 
 **Mimik**
 - Gesicht: `h.userData.blockFace.set(ausdruck, { talk, blink, look, blush })`
-  - Ausdrücke: `neutral`, `happy`, `laugh`, `sad`, `angry`, `surprised`, `awkward`, `sideeye`, `shocked`, `smirk`
+  - Ausdrücke: `neutral`, `happy`, `laugh`, `sad`, `angry`, `surprised`, `awkward`, `sideeye`, `shocked`, `smirk`, `cool` (halb geschlossene Lider + Grinsen, lässig/souverän; genutzt im Profilbild)
   - `talk` 0…1 öffnet den Mund (aus der Stimme: `lipAt(t, hüllkurve, start, 0.8)`), `blink` 0/1 (`blinkAt(t, seed)`), `look: [x, y]` Blickrichtung (−1…1), `blush` 0…1 rote Wangen
   - Im Video jedes Frame neu setzen. Fertige Gesichter werden gecacht, das kostet kaum Zeit.
 - Alte Aufrufe `h.userData.face.expr(...)` / `face.set({ jawOpen, blink })` funktionieren weiter.
