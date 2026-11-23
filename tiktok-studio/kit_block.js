@@ -209,7 +209,9 @@ export function povPhoneRig(stage, h, { screen = null, screenColor = 0x9ad0ff, t
   const g = new THREE.Group(); g.name = 'PovPhone'; const ph = new THREE.Group(); ph.rotation.x = tilt; g.add(ph);
   const mk = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = false; m.receiveShadow = true; m.frustumCulled = false; return m; };
   ph.add(mk(rbox(0.074, 0.152, 0.01, 0.009, 3), new THREE.MeshPhysicalMaterial({ color: 0x141418, roughness: 0.28, clearcoat: 1 }), 0, 0, 0));
-  ph.add(mk(new THREE.PlaneGeometry(0.066, 0.142), new THREE.MeshBasicMaterial({ color: screen ? 0xffffff : screenColor, map: screen, toneMapped: false }), 0, 0, 0.0052));
+  // Bildschirm knapp unter der Leucht-Schwelle des Bloom (sonst bekommt die Schrift einen Schein und wird unscharf)
+  const scrM = new THREE.MeshBasicMaterial({ color: screen ? 0xffffff : screenColor, map: screen, toneMapped: false }); if (screen) scrM.color.setScalar(0.8);
+  const scr = mk(new THREE.PlaneGeometry(0.066, 0.142), scrM, 0, 0, 0.0052); ph.add(scr);
   const skin = toy(shade(spec.skin, 0.8), { clearcoat: 0.1 }), sleeve = toy(spec.shirt), cuff = toy(shade(spec.shirt, 0.82));
   // linke Hand hält das Handy von hinten unten, rechte Hand von rechts, Daumen am Bildschirm
   ph.add(mk(rbox(0.09, 0.075, 0.045, 0.014, 3), skin, -0.012, -0.075, -0.028, 0.25, 0, 0.18));
@@ -223,7 +225,10 @@ export function povPhoneRig(stage, h, { screen = null, screenColor = 0x9ad0ff, t
   cam.add(g); g.visible = false;
   const down = new THREE.Vector3(0.02, -0.5, -0.33), up = new THREE.Vector3(0.0, -0.085, -0.33);
   const near = new THREE.Vector3(0.0, -0.048, -0.245); // zum Lesen näher an die Augen (Chats)
-  return { group: g, set(k, zoom = 0) { g.visible = k > 0.005; const s = k * k * (3 - 2 * k), z = zoom * zoom * (3 - 2 * zoom); g.position.lerpVectors(down, up, s).lerp(near, z * s); g.rotation.z = (1 - s) * 0.18; } };
+  return { group: g, screen: scr,
+    // neuen Bildschirm-Inhalt zeigen (z. B. chatTex mit einer Nachricht mehr, sobald sie im Video auftaucht)
+    setScreen(t) { scrM.map = t; scrM.color.setScalar(0.8); scrM.needsUpdate = true; },
+    set(k, zoom = 0) { g.visible = k > 0.005; const s = k * k * (3 - 2 * k), z = zoom * zoom * (3 - 2 * zoom); g.position.lerpVectors(down, up, s).lerp(near, z * s); g.rotation.z = (1 - s) * 0.18; } };
 }
 // Bildschirm-Inhalt: Chat (Messenger, dunkel). msgs: [{ me, text, time }], seen: 'Gelesen 22:14', typing: true = „schreibt …“-Blase.
 // Große Schrift, damit man es im Video lesen kann. Gibt eine CanvasTexture zurück (.image = Canvas, auch für 2D-Einblendungen nutzbar).

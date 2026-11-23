@@ -237,7 +237,7 @@
 - [x] Look-Baukasten, feste Besetzung und drei Sets (Straße, Jugendzimmer, Schule) mit Referenzbildern in `look/`
 - [x] **Klötzchen-Figuren** (`kit_block.js`): ganze Besetzung, Mimik, 26 Bewegungen, Härtetest (`look/bewegungen.png`), Szenen umgestellt, Video-Vorlage in Ego-Perspektive (23.11.)
 - [x] `LOOK_BIBEL.md`: Regeln und Arbeitsablauf für neue Orte
-- [~] Handy-Chat (23.11.): `chatTex()` in `kit_block.js` zeichnet Chats (Nachrichten, „Gelesen“, „schreibt …“), Beispiel `chat_test.html?mode=hand|overlay`: **1 im Handy in deinen Händen** (`phone.set(1, 1)` holt es zum Lesen näher) oder **2 groß eingeblendet**. Auswahl des Nutzers offen.
+- [x] **Handy-Chat (entschieden 23.11.): Variante 1 – Chats erscheinen auf dem Handy in deinen Händen** (Ego-Perspektive). `chatTex()` in `kit_block.js` zeichnet Nachrichten, „Gelesen“ und „schreibt …“; `ph.set(1, 1)` holt das Handy zum Lesen näher, `ph.setScreen()` wechselt den Inhalt, wenn eine Nachricht dazukommt. Beispiel: `chat_test.html`. Details in `LOOK_BIBEL.md`.
 - [ ] Optional: Vorrat an fertigen Videos für die erste Woche
 
 ## 7. Nächste Schritte
@@ -269,7 +269,6 @@
    - Datei `folgeNN.mp4` committen und dem Nutzer schicken
 
 **Noch offen** (kann parallel laufen)
-- Handy-Chat: Nutzer wählt Variante 1 (im Handy) oder 2 (groß eingeblendet), siehe `chat_test.html`. Chats kommen u. a. in Folge 2, 3 (letzte Nachricht) und 6 vor.
 - Posting-Plan (niedrige Priorität):
   - Uhrzeiten, Captions, Hashtags
   - einheitliche Titelbilder „Regel Nr. X“

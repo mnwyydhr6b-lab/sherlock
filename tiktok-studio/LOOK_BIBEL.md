@@ -87,6 +87,8 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
   - Gehen/Stehen: `povPose(du, { steady: true, pitch: -0.06, bob: 0.012, t })` – ruhige Kamera auf Augenhöhe, leichtes Wippen beim Gehen
   - Kopf folgt der Animation: `povPose(du)`
   - **Handy wie in Spielen:** `const ph = povPhoneRig(stage, du, { screen: partyStoryTex() })`, pro Frame `ph.set(k)` (0 = unten aus dem Bild, 1 = hochkant vor dir, Bildschirm zu dir, Klötzchen-Hände halten es). Eigene Bildschirm-Inhalte als Canvas-Textur übergeben (Vorlage: `partyStoryTex()` in `kit_block.js`). Dabei die Kamera nur leicht nach unten neigen.
+  - **Chats (Nutzer-Entscheidung 23.11.): immer auf dem Handy in deinen Händen**, nicht als 2D-Einblendung. `chatTex({ name, msgs: [{ me, text, time }], seen: 'Gelesen 22:14', typing })` zeichnet einen Chat mit großer Schrift; `ph.set(1, 1)` holt das Handy zum Lesen näher an die Augen. Nachrichten im Video nacheinander zeigen: sobald eine neue dazukommt, `ph.setScreen(chatTex({ … msgs: bisher }))` (Texturen vorab einmal pro Stand erzeugen) und ein „Pling“ in den Ton legen. Beispiel: `chat_test.html` (Standard `mode=hand`; `mode=overlay` nur, falls mal sehr viel Text kommt).
+  - Der Handy-Bildschirm leuchtet bewusst knapp unter der Bloom-Schwelle, damit die Schrift scharf bleibt.
   - Blick zu Personen: `dir` zum Kopf/Gesicht der Person hin mischen (die anderen reagieren mit ihren Gesichtern)
   - Übergänge mit `smooth()` zwischen den Blickrichtungen mischen (siehe `clip_test.html`), Bildwinkel 60–70
   - Schnell testen: `pov_test.html?shot=leute|handy`
