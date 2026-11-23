@@ -202,6 +202,10 @@
 - Pinkes Partylicht sparsam einsetzen (`pinkI` ca. 0,7), sonst wird die Hauswand komplett pink.
 - Handy bei übertragenen Bewegungen: im Video jedes Frame `syncPhone(h)` aufrufen, sonst bleibt es nach `Texting` sichtbar.
 - Klötzchen-Kopf ist groß: Hand-am-Kopf-Bewegungen und hohe Stuhllehnen im Testbild prüfen.
+- **Schwarze Blöcke im Video** (23.11. behoben): Ein einzelner ungültiger Pixel (NaN) wird von Tiefenschärfe und Leuchteffekt zu einem großen schwarzen Rechteck verschmiert. Ursache war das Bump-Mapping an hauchdünnen Fasen schräger Giebelkanten.
+  - Fix 1: `triMat` in `kit_world.js` rechnet die Bump-Normale jetzt NaN-sicher.
+  - Fix 2: Sicherheitsnetz `nanGuard()` in `kit_look.js` ersetzt ungültige Pixel vor allen Effekten durch ihre Nachbarn.
+  - Falls es wieder auftaucht: `node diag_nan.js clip_test.html 0.21,0.38` findet die ungültigen Pixel und nennt das Objekt darunter.
 - Netzwerk:
   - Gesperrt: kenney.nl, quaternius.com, poly.pizza, opengameart, tiktok.com
   - Freigegeben (23.11.): files.makehumancommunity.org (nur für `make_moves.sh` nötig; die fertigen Bewegungen liegen schon in `assets/moves/`)

@@ -134,13 +134,19 @@ export function triMat({ map = null, bump = null, scale = 0.5, color = 0xffffff,
         float triH(vec3 p) { return texture2D(bumpMap, triPlaneUV(p)).x; }
         vec2 dHdxy_fwd() { vec3 dpx = dFdx(vTriPos), dpy = dFdy(vTriPos); float Hll = bumpScale * triH(vTriPos);
           return vec2(bumpScale * triH(vTriPos + dpx) - Hll, bumpScale * triH(vTriPos + dpy) - Hll); }
+        // robust gegen entartete Ableitungen (hauchdünne Fasen-Dreiecke, z. B. an schrägen Giebelkanten): sonst entsteht NaN,
+        // und der Leuchteffekt macht daraus einen großen schwarzen Block im Bild. Vergleiche mit ! fangen auch NaN ab.
         vec3 perturbNormalArb( vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float faceDirection ) {
-          vec3 vSigmaX = normalize( dFdx( surf_pos.xyz ) ); vec3 vSigmaY = normalize( dFdy( surf_pos.xyz ) ); vec3 vN = surf_norm;
+          if ( !( abs( dHdxy.x ) < 1e6 && abs( dHdxy.y ) < 1e6 ) ) return surf_norm;
+          vec3 sx = dFdx( surf_pos.xyz ), sy = dFdy( surf_pos.xyz ); float lx = dot( sx, sx ), ly = dot( sy, sy );
+          if ( !( lx > 1e-20 && ly > 1e-20 && lx < 1e20 && ly < 1e20 ) ) return surf_norm;
+          vec3 vSigmaX = sx * inversesqrt( lx ); vec3 vSigmaY = sy * inversesqrt( ly ); vec3 vN = surf_norm;
           vec3 R1 = cross( vSigmaY, vN ); vec3 R2 = cross( vN, vSigmaX ); float fDet = dot( vSigmaX, R1 ) * faceDirection;
-          vec3 vGrad = sign( fDet ) * ( dHdxy.x * R1 + dHdxy.y * R2 ); return normalize( abs( fDet ) * surf_norm - vGrad ); }
+          vec3 vGrad = sign( fDet ) * ( dHdxy.x * R1 + dHdxy.y * R2 ); vec3 n = abs( fDet ) * surf_norm - vGrad; float ln = dot( n, n );
+          return ( ln > 1e-20 && ln < 1e20 ) ? n * inversesqrt( ln ) : surf_norm; }
       #endif`);
   };
-  mat.customProgramCacheKey = () => 'tri' + scale + (map ? 'm' : '') + (bump ? 'b' : '');
+  mat.customProgramCacheKey = () => 'tri2' + scale + (map ? 'm' : '') + (bump ? 'b' : '');
   return mat;
 }
 

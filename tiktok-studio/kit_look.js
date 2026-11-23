@@ -54,6 +54,22 @@ export function buildSky(target, P, { withStars = true, moonPos = [186, 128, -16
 // ---------------------------------------------------------------- stage
 // createStage({ preset, W, H, query }) -> { renderer, scene, camera, P, keyLight, view(), setFocus(), render() }
 // URL-Parameter überschreiben Preset-Werte: exp, sat, con, vig, bloom, bth, ao, env, hemi, key, rim, ap, dof, fov, cx..tz
+// Sicherheitsnetz: ersetzt ungültige Pixel (NaN/Inf, z. B. aus Bump-Mapping an hauchdünnen Kanten) durch den Mittelwert der Nachbarn.
+// Ohne das verschmieren Tiefenschärfe und Leuchteffekt einen einzigen kaputten Pixel zu einem großen schwarzen Block.
+function nanGuard() {
+  const p = new ShaderPass({ uniforms: { tDiffuse: { value: null } },
+    vertexShader: 'void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `uniform sampler2D tDiffuse;
+      bool badC(vec4 c) { return any(isnan(c)) || any(isinf(c)) || !(max(max(c.r, c.g), c.b) < 6.0e4) || !(min(min(c.r, c.g), c.b) > -6.0e4); }
+      void main(){ ivec2 p = ivec2(gl_FragCoord.xy), sz = textureSize(tDiffuse, 0); vec4 c = texelFetch(tDiffuse, p, 0);
+        if (badC(c)) { vec4 s = vec4(0.0); float n = 0.0;
+          for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) { if (i == 0 && j == 0) continue;
+            vec4 q = texelFetch(tDiffuse, clamp(p + ivec2(i, j), ivec2(0), sz - 1), 0); if (!badC(q)) { s += q; n += 1.0; } }
+          c = n > 0.0 ? s / n : vec4(0.0, 0.0, 0.0, 1.0); }
+        gl_FragColor = c; }` });
+  p.material.toneMapped = false; return p;
+}
+
 export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = location.search, parent = document.getElementById('wrap') || document.body, shadowSize = 4096, shadowExtent = 22 } = {}) {
   const Q = new URLSearchParams(query); const qn = (k, d) => Q.has(k) ? parseFloat(Q.get(k)) : d;
   // ?hq = höchste Qualität für Standbilder (volles Himmelslicht, volle Auflösung der Nachbearbeitung, weiche Schatten, feines Laub)
@@ -90,10 +106,11 @@ export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = loca
       L.sort((a, b) => w(b) - w(a)); L.slice(keep).forEach(l => l.visible = false); return stage; },
     build({ focus = null, aperture = 0.0009, maxblur = 0.0045 } = {}) {
       scene.traverse(o => { if (o.isLight && o.shadow) o.shadow.camera.layers.enable(3); }); // Schatten-Stellvertreter (kit_nature)
-      composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
+      composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera)); composer.addPass(nanGuard());
       stage.passes = {};
       if (!Q.has('noao')) { const gtao = stage.passes.gtao = new GTAOPass(scene, camera, W, H); gtao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.4, thickness: 1.2, scale: 1, samples: qn('aos', 16) }); gtao.blendIntensity = qn('ao', P.ao ?? 0.85); composer.addPass(gtao); }
       if (qn('dof', 1) > 0 && focus) { bokeh = stage.passes.bokeh = new BokehPass(scene, camera, { focus: camera.position.distanceTo(focus), aperture: qn('ap', aperture), maxblur }); composer.addPass(bokeh); }
+      if (bokeh || stage.passes.gtao) composer.addPass(nanGuard());
       composer.addPass(stage.passes.bloom = new UnrealBloomPass(new THREE.Vector2(W, H), qn('bloom', P.bloom), 0.55, qn('bth', P.bth)));
       composer.addPass(new OutputPass());
       grade = new ShaderPass({ uniforms: { tDiffuse: { value: null }, sat: { value: qn('sat', P.sat ?? 1.12) }, con: { value: qn('con', P.con ?? 0.3) }, vig: { value: qn('vig', P.vig ?? 0.8) } },
@@ -121,5 +138,6 @@ export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = loca
     // für Standbilder: window.renderStill + window.ready setzen
     ready() { window.renderStill = () => stage.render(); window.ready = true; return stage; },
   };
+  window.__stage = stage; // Debug-Zugriff von außen (z. B. diag_nan.js)
   return stage;
 }
