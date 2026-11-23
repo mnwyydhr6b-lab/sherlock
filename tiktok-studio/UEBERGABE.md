@@ -20,6 +20,7 @@
 - Kosten: Higgsfield ist zu teuer (nicht nutzen). ElevenLabs ist als verbundener Dienst verfügbar (Ton, Stimmen).
 - Posten ist erst ab ca. **29.11.2026** möglich. Bis dahin wird alles rundherum vorbereitet.
 - **Account:** Der bestehende Account (ca. 2.700 Follower) wird weitergenutzt und auf die neue Nische umgestellt (entschieden am 22.11.).
+- **Kanal (23.11.):** Name **„Regeln TV“**, Bio **„Regeln für mehr Selbstrespekt“**, Profilbild `kanal/profilbild.png`.
 
 ## 2. Format
 
@@ -226,9 +227,8 @@
 - [x] Spielwelt gebaut und freigegeben, Assets im Repo gesichert
 - [x] Länge der Folgen: 50 s bis 10k, danach 61–70 s
 - [x] Account: bestehender Account wird weitergenutzt
-- [ ] Kanal-Auftritt: Anzeigename, Bio, Profilbild; alte, unpassende Videos auf „Nur ich“ stellen (Nutzer entscheidet)
-  - Vorschlag (noch nicht bestätigt): Anzeigename **„Ungeschriebene Regeln“**, Bio **„Regeln, die dir keiner sagt. 🧱 Jeden Tag eine neue Folge.“** (57 von 80 Zeichen)
-  - Profilbild: Reine Metaphern (leeres Regelbuch, Schild) und die Klötzchen-Varianten mit Regel-Motiv sind überholt. Wunsch des Nutzers (23.11.): **Du „mit viel Aura“, einfach cool**. Drei Varianten in `look/profilbild_aura_vorschau.png`: **A blaue Aura, B lila Aura, C Gold mit Sonnenbrille** (fertige Bilder 1080×1080: `look/profilbild_aura_blau|lila|gold.png`). Szene `profil_aura.html?v=1|2|3` (`&hq`, 2× rendern, auf 1080×1080 verkleinern). **Auswahl steht noch aus.**
+- [x] **Kanal-Auftritt (entschieden 23.11.):** Anzeigename **„Regeln TV“**, Bio **„Regeln für mehr Selbstrespekt“**, Profilbild **`kanal/profilbild.png`** (Du mit Sonnenbrille, goldener Aura, verschränkten Armen; 1080×1080).
+  - In der App trägt der Nutzer das selbst ein. Alte, unpassende Videos auf „Nur ich“ stellen: entscheidet der Nutzer.
 - [x] Folgenliste → `folgenliste.md`. Der Nutzer hat **1, 3, 4, 9 und 10** als Start-Folgen gewählt (⭐).
 - [~] Skripte: Entwurf Folge 1 (50 s) in `skripte/folge01_regel1.md`. **Hook und Aufbau will der Nutzer pro Folge gemeinsam festlegen**, deshalb ist der Entwurf nicht final.
 - [ ] Serien-Bibel: Hauptfigur, wiederkehrende Figuren, Orte, Stimmen, Musik, Ende-Karte
@@ -269,7 +269,6 @@
    - Datei `folgeNN.mp4` committen und dem Nutzer schicken
 
 **Noch offen** (kann parallel laufen)
-- Kanal-Auftritt: Anzeigename, Bio, Profilbild (Aura-Variante A, B oder C auswählen lassen)
 - Posting-Plan:
   - Uhrzeiten, Captions, Hashtags
   - einheitliche Titelbilder „Regel Nr. X“

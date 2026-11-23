@@ -11,8 +11,8 @@
 </script>
 <script type="module">
 // Profilbild „Aura“: Du lässig mit verschränkten Armen, halb geschlossenen Augen und Grinsen, Gegenlicht und leuchtende Aura um die Silhouette.
-// profil_aura.html?v=1 (blau) | 2 (lila) | 3 (Sonnenbrille, gold)
-// Rendern: node still.js "profil_aura.html?v=2&hq" out.png 2 1080 1080, danach mit PIL auf 1080×1080 verkleinern.
+// profil_aura.html?v=3 (Sonnenbrille, gold) = gewähltes Profilbild von „Regeln TV“ (23.11.) -> kanal/profilbild.png. Weitere Farben: v=1 (blau), v=2 (lila).
+// Rendern: node still.js "profil_aura.html?v=3&hq" out.png 2 1080 1080, danach mit PIL auf 1080×1080 verkleinern.
 import * as THREE from 'three';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
@@ -22,7 +22,7 @@ import { loadHumanAssets, lookAt } from './kit_cast.js';
 import { rotBoneWorld } from './kit_human.js';
 import { spawnBlock } from './kit_block.js';
 const stage = createStage({ preset: 'studio', shadowExtent: 3, W: 1080, H: 1080 });
-const { scene, Q, qn } = stage; const v = Q.get('v') || '2';
+const { scene, Q, qn } = stage; const v = Q.get('v') || '3';
 const [cA, cB] = ({ 1: [0x46dcff, 0x2f5bff], 2: [0xff52dc, 0x7d3cff], 3: [0xffc24a, 0xff5a1f] })[v] || [0xff52dc, 0x7d3cff];
 const glasses = Q.has('glasses') ? Q.get('glasses') === '1' : v === '3';
 stage.keyLight.intensity *= 0.12; if (stage.rimLight) stage.rimLight.intensity *= 0.15; stage.hemi.intensity *= qn('hemiK', 0.3);
