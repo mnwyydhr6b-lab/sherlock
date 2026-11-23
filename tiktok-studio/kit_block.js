@@ -5,9 +5,14 @@
 //   const du = spawnBlock('du', { x, y, z, ry, anim: 'Idle_Loop' }); scene.add(du);
 //   du.userData.blockFace.set('happy', { talk: 0.6, blink: 0 })   // Gesicht
 //   du.userData.blush(0.8)                                         // rot werden (peinlich)
+//   du.userData.crack(1); const fall = du.userData.dropChips(scene, t0); fall(t)  // Risse, Blöcke fallen ab
+// Bewegungen (Motion-Capture, siehe kit_retarget):
+//   await loadBlockMoves();  playMove(du, 'Texting', 2.0)           // Standbild
+//   prepMoves(du, ['Texting', 'Talk with gestures']) -> Actor-Segmente mit anim: 'Ara:Texting' usw.; pro Frame syncPhone(du)
 import * as THREE from 'three';
 import { rbox } from './kit_world.js';
 import { spawn, CAST } from './kit_cast.js';
+import { loadMoves, retarget, showPhone } from './kit_retarget.js';
 
 // Farben/Teile der festen Besetzung im Klötzchen-Stil
 export const BLOCK_CAST = {
@@ -33,6 +38,7 @@ const FACES = {
   angry:    { brow: [-0.08, -0.45], eye: 0.8, mouth: 'tight' },
   surprised:{ brow: [0.22, 0], eye: 1.2, mouth: 'o' },
   awkward:  { brow: [0.05, 0.3], eye: 0.95, mouth: 'wobble', blush: 0.7, sweat: true },
+  smirk:    { brow: [0.02, -0.12], eye: 0.85, mouth: 'smirk' },
   sideeye:  { brow: [-0.04, -0.15], eye: 0.8, mouth: 'flat_side', look: [0.35, 0] },
   shocked:  { brow: [0.25, 0.1], eye: 1.3, mouth: 'big_o' },
 };
@@ -63,6 +69,7 @@ function drawFace(spec, name, { blink = 0, talk = 0, look = null, blush = 0 } = 
   const openMouth = (w, h, smile = 0) => { g.beginPath(); g.moveTo(mx - w, my - smile * h * 0.3); g.quadraticCurveTo(mx, my + h * (1 + smile), mx + w, my - smile * h * 0.3); g.quadraticCurveTo(mx, my - h * 0.25, mx - w, my - smile * h * 0.3); g.fill();
     g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(mx, my - h * 0.02, w * 0.62, h * 0.18, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#e06a78'; g.beginPath(); g.ellipse(mx, my + h * 0.55, w * 0.45, h * 0.28, 0, 0, Math.PI * 2); g.fill(); };
   if (m === 'flat') { g.beginPath(); g.moveTo(mx - mw * 0.55, my); g.lineTo(mx + mw * 0.55, my); g.stroke(); }
+  else if (m === 'smirk') { g.beginPath(); g.moveTo(mx - mw * 0.55, my + 0.005 * S); g.quadraticCurveTo(mx + mw * 0.1, my + 0.03 * S, mx + mw * 0.7, my - 0.035 * S); g.stroke(); }
   else if (m === 'flat_side') { g.beginPath(); g.moveTo(mx - mw * 0.4, my + 0.01 * S); g.lineTo(mx + mw * 0.6, my - 0.012 * S); g.stroke(); }
   else if (m === 'smile') { g.beginPath(); g.moveTo(mx - mw * 0.8, my - 0.02 * S); g.quadraticCurveTo(mx, my + 0.08 * S, mx + mw * 0.8, my - 0.02 * S); g.stroke(); }
   else if (m === 'open_smile') openMouth(mw, 0.1 * S, 0.6);
@@ -184,5 +191,20 @@ export function spawnBlock(name, o = {}) {
           y = Math.max(c.ground, c.ground + vb * t2 - 4.9 * t2 * t2); x = c.p0.x + c.v.x * (tHit + Math.min(t2, 0.4) * 0.5); z = c.p0.z + c.v.z * (tHit + Math.min(t2, 0.4) * 0.5); }
         c.m.position.set(x, y, z); const k = Math.min(tt, 1.2); c.m.rotation.set(c.spin.x * k, c.spin.y * k, c.spin.z * k); } }; };
   ud.blockParts = parts; ud.blockSpec = spec;
+  // Kompatibilität: alter Gesichts-Aufruf (face.expr / face.set) steuert das gezeichnete Gesicht
+  let cur = 'neutral', curBlink = 0, curTalk = 0;
+  ud.face = { expr(name, k = 1, extra = {}) { cur = FACES[name] ? name : 'neutral'; curTalk = extra.jawOpen || 0; curBlink = extra.blink || 0; ud.blockFace.set(cur, { talk: curTalk, blink: curBlink }); return ud.face; },
+    set(vals = {}) { if ('jawOpen' in vals) curTalk = vals.jawOpen; if ('blink' in vals) curBlink = vals.blink; ud.blockFace.set(cur, { talk: curTalk, blink: curBlink }); return ud.face; },
+    reset() { curTalk = 0; curBlink = 0; ud.blockFace.set(cur); return ud.face; } };
   return h;
 }
+
+// ---------------------------------------------------------------- Bewegungen (übertragene Motion-Capture-Clips)
+let MOVES = null;
+export async function loadBlockMoves() { if (!MOVES) MOVES = { m: await loadMoves('m'), f: await loadMoves('f') }; return MOVES; }
+// Clips für eine Figur vorbereiten (danach im Actor als anim: 'Ara:<Name>' nutzbar). Namen: siehe make_moves.sh / LOOK_BIBEL.
+export function prepMoves(h, names) { if (!MOVES) throw new Error('zuerst await loadBlockMoves()'); const lib = CAST[h.userData.castName] && CAST[h.userData.castName].sex === 'female' ? MOVES.f : MOVES.m; return names.map(n => retarget(h, lib, n)); }
+// Standbild: Bewegung zum Zeitpunkt t zeigen
+export function playMove(h, name, t = 1) { const [c] = prepMoves(h, [name]); const mx = h.userData.mixer; mx.stopAllAction(); mx.clipAction(c).play(); mx.setTime(t); h.userData.applyBuild(); showPhone(h, !!c.userData.phone); h.updateMatrixWorld(true); return c; }
+// Video: Handy nur zeigen, solange eine Handy-Bewegung (Texting, Phone call) überwiegt – jedes Frame nach actor.update(t) aufrufen
+export function syncPhone(h) { let on = false; for (const a of h.userData.mixer._actions) { const c = a.getClip(); if (c.userData && c.userData.phone && a.getEffectiveWeight() > 0.5) on = true; } showPhone(h, on); }

@@ -11,7 +11,7 @@
 </script>
 <script type="module">
 // Besetzung als Klötzchen nebeneinander, jede Figur mit eigener Bewegung (Härtetest).
-// block_lineup.html?who=du,mia,leon&moves=Texting,Phone call,Laugh&t=1.5&set=strasse|studio
+// block_lineup.html?who=du,mia,leon&moves=Texting,Phone call,Laugh&t=1.5&exprs=happy,sad&rys=0,45,90 (Drehung je Figur in Grad)
 import * as THREE from 'three';
 import { createStage } from './kit_look.js';
 import { cnv, tex, makeRng, std, rbox } from './kit_world.js';
@@ -30,7 +30,7 @@ const who = (Q.get('who') || 'du,mia,leon,jasmin,tarik,ben,mama,papa').split(','
 const moves = (Q.get('moves') || '').split(',').filter(Boolean); const exprs = (Q.get('exprs') || '').split(',');
 const gap = qn('gap', 0.95), n = who.length, t = qn('t', 1.5);
 who.forEach((name, i) => {
-  const x = (i - (n - 1) / 2) * gap; const h = spawnBlock(name, { x, y: 0, z: 0, ry: qn('ry', 0.15) }); scene.add(h);
+  const rys = (Q.get('rys') || '').split(',').filter(Boolean).map(Number); const x = (i - (n - 1) / 2) * gap; const h = spawnBlock(name, { x, y: 0, z: 0, ry: rys.length ? rys[i] * Math.PI / 180 : qn('ry', 0.15) }); scene.add(h);
   const mv = moves[i % Math.max(1, moves.length)];
   if (mv && mv !== '-') { const lib = CAST[name].sex === 'female' ? mf : mm;
     if (/^sit/i.test(mv)) { const st = new THREE.Mesh(rbox(0.46, 0.46, 0.42, 0.04), std(0x6a5a8a, 0.7)); st.position.set(x, 0.23, -0.12); st.castShadow = st.receiveShadow = true; scene.add(st); }

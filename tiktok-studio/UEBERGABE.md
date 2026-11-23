@@ -1,6 +1,7 @@
 # Übergabe – TikTok-Projekt „Ungeschriebene Regeln“
 
-> Lebendes Dokument. Stand: 22.11.2026. Wird bis zum Start laufend ergänzt.
+> Lebendes Dokument. Stand: 23.11.2026. Wird bis zum Start laufend ergänzt.
+> **Wichtigste Änderung am 23.11.:** Die Figuren sind jetzt **Klötzchen-Figuren** (`kit_block.js`) in der unveränderten, detaillierten Spielwelt. Alles dazu steht in `LOOK_BIBEL.md`.
 > Neuer Chat: Diese Datei zuerst komplett lesen, dann **`LOOK_BIBEL.md`** lesen und die Bilder in **`look/`** ansehen. Danach bei **„7. Nächste Schritte“** weitermachen.
 
 ## 1. Ziel und Rahmen
@@ -29,6 +30,7 @@
   - Hook draußen: Er läuft, sieht Leons Party-Story und geht innerhalb von 5 s hin.
   - Zähler **„Selbstrespekt“** oben im Bild fällt in Stufen (100 → 85 → 72 → 55 → 38 → 19 → 5 %) und blinkt rot bei jedem Abfall.
   - Mit dem Zähler verliert die Welt Farbe (Sättigung sinkt).
+  - **Selbstrespekt sichtbar an „Du“ (seit 23.11.):** erst rote Wangen, dann Risse, bei einem großen Fehler brechen Blöcke ab und fallen zu Boden (Referenz: `look/selbstrespekt.png`).
   - Figuren sprechen nur kurze Sätze (ElevenLabs).
   - Erzähler-Untertitel in kurzen Sätzen.
   - **Ende wie im „9 Schüsse“-Video:**
@@ -49,20 +51,22 @@
   - Ende: „Was wäre, wenn du hingehst, obwohl du nicht eingeladen bist?“ und „Wärst du trotzdem hingegangen?“
   - Er drängt sich rein und bleibt; nur die Stimmung der anderen kippt. Keine Afterparty.
 
-## 3. Look – „Spielwelt“ (vom Nutzer freigegeben am 22.11.2026)
+## 3. Look – Klötzchen-Figuren in der „Spielwelt“ (Welt freigegeben am 22.11., Figuren am 23.11.2026)
 
-- Look: wie ein 3D-Videospiel, menschennahe Figuren, aber nicht realistisch (Richtung Sims).
-- Welt: Deutschland im Alltag. Drei fertige Orte im selben Look:
+- **Figuren:** weiche Klötzchen mit gezeichnetem, ausdrucksstarkem Gesicht (`kit_block.js`). Nutzer: „Ja das passt sehr gut.“
+  - Abgelöst: die menschennahen Figuren mit Fingern und Kleidungshüllen (immer wieder Fehler: Handy in der Faust, Hand weg, Loch am Hals) und realistische Figuren (Ara3D, „zu realistisch“).
+- **Welt:** bleibt komplett, wie sie ist („die hat mir gefallen mit den ganzen Details“). Deutschland im Alltag, stilisiert, sehr detailreich, filmisches Licht. Drei fertige Orte im selben Look:
   - Straße/Partyhaus bei Nacht
   - Jugendzimmer
   - Schule bei Tag
 - **Look-Regeln, Referenzbilder und Arbeitsablauf: `LOOK_BIBEL.md` + Ordner `look/`.** Damit lassen sich neue Orte im gleichen Look bauen.
 - Key-Visual: `tiktok-studio/spielwelt_keyvisual.png` (aktuelle Fassung: `look/set_strasse_nacht.png`)
 - **Abgelehnt, nicht wieder vorschlagen:**
-  - Klötzchen-, Minecraft-, Roblox- und Comic-Look, Holz-Spielzeugwelt („Holzwelt“)
+  - Minecraft-Pixel-Look, Roblox-Look, Comic-Look, Holz-Spielzeugwelt („Holzwelt“)
+  - realistische Figuren, menschennahe Figuren mit Fingern (fehleranfällig), Low-Poly-Fertigfiguren
   - Mystery, Märchen-Bürokratie, Alltags-Krimi-Rätsel, „seltsame Orte“, Aufzug-Horror
   - reine Wissens- oder Fakten-Inhalte, Inhalte ohne eigene Figuren
-- Die alten Pilot-Videos `regel1*.mp4` (Klötzchen-Look) dienen nur noch als Referenz für Timing und Dramaturgie.
+- Die alten Pilot-Videos `regel1*.mp4` (Pixel-Klötzchen in einfacher Welt) dienen nur noch als Referenz für Timing und Dramaturgie.
 
 ## 4. Technik
 
@@ -76,15 +80,15 @@
 
 **Befehle**
 
-- Standbild rendern (Szenen-Seiten: `spielwelt.html`, `zimmer.html?shot=bett|desk`, `schule.html`, `cast.html?mode=cast|turn` mit Breite/Höhe 1920 1080):
+- Standbild rendern (Szenen-Seiten: `spielwelt.html`, `zimmer.html?shot=bett|desk`, `schule.html`; Figuren-Tests: `block_lineup.html` mit Breite/Höhe 1920 1080, `block_test.html?shot=strasse|nah|peinlich|risse`):
   ```
   node still.js "spielwelt.html" out.png 2
-  node still.js "cast.html?mode=cast" out.png 2 1920 1080
+  node still.js "block_lineup.html?moves=Texting,Laugh" out.png 1 1920 1080
   ```
   Danach mit PIL (Lanczos) von 2160×3840 auf 1080×1920 verkleinern.
 - Video rendern:
-  - Befehl: `node render.js clip_test.html <ordner> <sekunden> 30` → JPG-Bildfolge, danach mit ffmpeg zu MP4 (siehe `make_clip_test.sh`).
-  - **Vorlage für jede Folge: `clip_test.html`** (8-s-Testclip: Du läuft zur Party, Gäste tanzen, Ballons wehen, Kamerafahrt, Zähler und Untertitel).
+  - Befehl: `node render.js clip_test.html <ordner> <sekunden> 24` → JPG-Bildfolge, danach mit ffmpeg zu MP4 (komplett: `./make_clip_test.sh`).
+  - **Vorlage für jede Folge: `clip_test.html`** (9,6-s-Testclip mit Klötzchen: Du läuft zur Party, bleibt am Tor stehen, holt das Handy raus (`Ara:Texting`), wird rot, bekommt Risse, Blöcke fallen; Gäste tanzen und reden, alle blinzeln; Kamerafahrt, Zähler und Untertitel).
   - `kit_anim.js`:
     - `Actor`: Animationen mit Überblendung, Laufweg, Drehung, `after`-Hook für Kopf/IK
     - `clipSpeed`: Laufgeschwindigkeit messen, damit die Füße nicht rutschen
@@ -126,7 +130,9 @@
 - `kit_look.js` – `createStage({ preset })`: Renderer, Himmel, Licht und Nachbearbeitung als feste Presets.
   - Presets: `nacht`, `abend`, `tag`, `innen_nacht`, `innen_tag`, `studio`
   - Methoden: `view()`, `build({ focus })`, `aimKey()`, `ready()`
-- `kit_cast.js` – feste Besetzung über `spawn(name)`, plus Posen-Helfer:
+- `kit_block.js` – **die Figuren der Serie:** `spawnBlock(name)`, Gesicht `blockFace.set()`, `blush()`, `crack()`, `dropChips()`, Bewegungen `loadBlockMoves()` / `playMove()` / `prepMoves()` / `syncPhone()`. Details in `LOOK_BIBEL.md`.
+- `kit_retarget.js` + `assets/moves/` – 26 Motion-Capture-Bewegungen (Ara3D-Bibliothek, CMU-Mocap, kommerziell nutzbar) werden auf unser Skelett übertragen. Neu erzeugen: `./make_moves.sh` (braucht npm und GitHub).
+- `kit_cast.js` – Skelett/Grunddaten der Besetzung (`spawn` wird intern von `spawnBlock` genutzt), plus Posen-Helfer:
   - `posePhone` (Handy halten), `holdCup` (Becher halten), `sitOn` (sitzen)
   - `faceTo` (Figur zu einem Punkt drehen), `lookAt` (Kopf zu einem Punkt drehen)
 - `kit_interior.js` – `makeRoom()` mit Fenstern, Türen, Heizkörper und Rollladenkasten.
@@ -140,7 +146,7 @@
 
 **Bausteine (Kits)**
 
-- `kit_human.js`
+- `kit_human.js` (nur noch Unterbau: Skelett, 86 Animationen, `armIK`, `rotBoneWorld`; die menschlichen Körper, Kleidung und Gesichter darin werden von `spawnBlock` ausgeblendet)
   - Figuren aus den Quaternius *Universal Base Characters* (CC0) mit 86 Animationen.
   - Prozedurale Kleidung:
     - Oberteil `hoodie`, `tee`, `shirt` oder `jacket`
@@ -162,7 +168,7 @@
     - Einzelwerte: `face.set({ smileL, smileR, frown, jawOpen, blink, wide, squint, lookL, lookR, lookUp, lookDown, browsUp, browsInnerUp, browsAngry })`
     - Im Video jedes Frame: `face.reset(); face.set(werte)`
     - Blinzeln: `blinkAt(t, seed)`. Lippen zur Stimme: `lipAt(t, hüllkurve, start, 0.42)`. Die Hüllkurve kommt aus `python3 envelope.py audio/x.mp3 24 > audio/x.env.json`.
-    - Vorlage: `mimik_demo.html` / `mimik_demo.mp4`. Referenzbild: `look/mimik.png`.
+    - (Veraltet: galt für die alten Gesichter. Für Klötzchen gilt `blockFace.set()`, Referenz `look/mimik.png`.)
   - `lookAt(h, punkt, k)` dreht Hals und Kopf jetzt exakt zum Ziel, auch wenn die Animation den Kopf neigt.
   - Kleidungsdetails: Hoodie mit Kapuze, Kordeln und Bauchtasche; Jacke mit Reißverschluss; Hemd mit Knopfleiste.
 - `kit_house.js` – `makeHouse()`: prozedurales Einfamilienhaus.
@@ -194,8 +200,11 @@
 - Halsausschnitt der Kleidung als Zylinder statt Ebene, sonst entsteht ein Loch an der Schulter (behoben).
 - Dünne Objekte mit `cast: false`, sonst werfen sie Mond-Schattenlinien.
 - Pinkes Partylicht sparsam einsetzen (`pinkI` ca. 0,7), sonst wird die Hauswand komplett pink.
+- Handy bei übertragenen Bewegungen: im Video jedes Frame `syncPhone(h)` aufrufen, sonst bleibt es nach `Texting` sichtbar.
+- Klötzchen-Kopf ist groß: Hand-am-Kopf-Bewegungen und hohe Stuhllehnen im Testbild prüfen.
 - Netzwerk:
   - Gesperrt: kenney.nl, quaternius.com, poly.pizza, opengameart, tiktok.com
+  - Freigegeben (23.11.): files.makehumancommunity.org (nur für `make_moves.sh` nötig; die fertigen Bewegungen liegen schon in `assets/moves/`)
   - GitHub per `git clone` funktioniert.
   - api.github.com liefert 403; für Suchen `gh api -X GET search/...` nutzen.
 
@@ -205,19 +214,23 @@
 - Will eigene Figuren und Details – „die Details machen es aus“.
 - Will auf Deutsch kurz und klar informiert werden.
 - Antwortet manchmal nicht auf Auswahl-Dialoge; dann einfache Textoptionen anbieten.
+- **Fehler im Bild stören ihn sehr** (fehlende Hand, Handy durch die Hand, Loch am Hals). Vor jedem Zeigen Testbilder selbst genau prüfen, besonders Hände, Hals, Handy und Kopf.
+- Will auffallen: eigener Twist statt Standard-Look (deshalb Klötzchen + Selbstrespekt-Effekt + detaillierte Welt).
 
 ## 6. Vorbereitung bis zum Start (Checkliste)
 
 - [x] Spielwelt gebaut und freigegeben, Assets im Repo gesichert
 - [x] Länge der Folgen: 50 s bis 10k, danach 61–70 s
 - [x] Account: bestehender Account wird weitergenutzt
-- [ ] Kanal-Auftritt: Anzeigename, Bio, Profilbild im Spielwelt-Look; alte, unpassende Videos auf „Nur ich“ stellen (Nutzer entscheidet)
+- [ ] Kanal-Auftritt: Anzeigename, Bio, Profilbild; alte, unpassende Videos auf „Nur ich“ stellen (Nutzer entscheidet)
+  - Profilbild: **Metapher statt Figur** (Nutzerwunsch). Vorschläge: A „Das leere Regelbuch“ (`look/profilbild_regelbuch.png`, Empfehlung) oder B „Schild ohne Aufschrift“ (`look/profilbild_schild.png`), Szene `profil_metapher.html?v=buch|schild`. **Auswahl steht noch aus.**
 - [x] Folgenliste → `folgenliste.md`. Der Nutzer hat **1, 3, 4, 9 und 10** als Start-Folgen gewählt (⭐).
 - [~] Skripte: Entwurf Folge 1 (50 s) in `skripte/folge01_regel1.md`. **Hook und Aufbau will der Nutzer pro Folge gemeinsam festlegen**, deshalb ist der Entwurf nicht final.
 - [ ] Serien-Bibel: Hauptfigur, wiederkehrende Figuren, Orte, Stimmen, Musik, Ende-Karte
 - [ ] Posting-Plan: Uhrzeiten, Captions, Hashtags, Titelbilder, KI-Kennzeichnung
 - [x] Animations-System für die Spielwelt (`kit_anim.js`, `kit_hud.js`) und Testclip `clip_test.mp4`
-- [x] Look-Baukasten, feste Besetzung (Charakterbogen) und drei Sets (Straße, Jugendzimmer, Schule) mit Referenzbildern in `look/`
+- [x] Look-Baukasten, feste Besetzung und drei Sets (Straße, Jugendzimmer, Schule) mit Referenzbildern in `look/`
+- [x] **Klötzchen-Figuren** (`kit_block.js`): ganze Besetzung, Mimik, Selbstrespekt-Effekt, 26 Bewegungen, Härtetest (`look/bewegungen.png`), Szenen und Video-Vorlage umgestellt (23.11.)
 - [x] `LOOK_BIBEL.md`: Regeln und Arbeitsablauf für neue Orte
 - [ ] Handy-Chat-Overlay (2D-Einblendung für Chat- und Story-Szenen)
 - [ ] Optional: Vorrat an fertigen Videos für die erste Woche
@@ -240,8 +253,11 @@
    - Rahmen: 50 s, Zähler „Selbstrespekt“, Endkarte „Was wäre, wenn …?“ und gelbe Frage
 2. Fehlende Drehorte mit den Baukästen bauen. Referenzbild nach `look/` legen und in der Look-Bibel eintragen.
 3. Szene als `folgeNN.html` nach dem Muster von `clip_test.html` anlegen:
-   - Figuren über `Actor`, Kamera über `cameraAt`
-   - Overlay über `kit_hud`
+   - Figuren mit `spawnBlock`, Bewegungen mit `prepMoves` + `Actor` (`anim: 'Ara:…'` oder Skelett-Clips wie `Walk_Loop`), jedes Frame `syncPhone`
+   - Gesichter jedes Frame mit `blockFace.set(ausdruck, { blink: blinkAt(t, seed), talk: lipAt(...) })`
+   - Selbstrespekt-Effekt an den Zähler koppeln (`blush`, `crack`, `dropChips`)
+   - Kamera über `cameraAt`, Overlay über `kit_hud`
+   - Testbilder genau prüfen (Hände, Handy, Kopf), erst dann rendern
 4. Testbilder an markanten Zeitpunkten rendern, ansehen und Feedback holen.
 5. Video rendern (24 fps, ca. 2 h im Hintergrund).
 6. Stimmen und Geräusche mit ElevenLabs erzeugen und mischen (wie in `make_clip_test.sh`).
@@ -249,7 +265,7 @@
    - Datei `folgeNN.mp4` committen und dem Nutzer schicken
 
 **Noch offen** (kann parallel laufen)
-- Kanal-Auftritt: Anzeigename, Bio, Profilbild im Spielwelt-Look
+- Kanal-Auftritt: Anzeigename, Bio, Profilbild (Metapher A oder B auswählen lassen)
 - Posting-Plan:
   - Uhrzeiten, Captions, Hashtags
   - einheitliche Titelbilder „Regel Nr. X“
@@ -262,4 +278,4 @@
    - Am besten in derselben Umgebung, damit ElevenLabs verbunden ist.
 2. Erste Nachricht:
    „Hol dir den Branch `claude/wizardly-rubin-v81hm1`, lies `tiktok-studio/UEBERGABE.md` komplett und mach bei Abschnitt 7 weiter.“
-3. Claude im neuen Chat führt `cd tiktok-studio && npm install` aus und prüft mit einem Standbild, dass die Spielwelt rendert.
+3. Claude im neuen Chat führt `cd tiktok-studio && npm install` aus und prüft mit einem Standbild (`node still.js "spielwelt.html?dof=0" test.png 0.5`), dass Spielwelt und Klötzchen-Figuren rendern.

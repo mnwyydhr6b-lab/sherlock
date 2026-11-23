@@ -47,7 +47,7 @@ async function main() {
     const yaw = 0.35 + qn('yaw', 10) * Math.PI / 180, dist = qn('dist', 1.25);
     stage.view({ pos: [hp.x + Math.sin(yaw) * dist, hp.y + 0.08, hp.z + Math.cos(yaw) * dist], target: [hp.x, hp.y - 0.12, hp.z], fov: qn('fov', 36) });
   }
-  if (shot === 'risse') { const upd = du.userData.dropChips(scene, 0, { n: 8 }); upd(qn('tc', 0.32)); }
+  if (shot === 'risse' && qn('chips', 1)) { const upd = du.userData.dropChips(scene, 0, { n: 8 }); upd(qn('tc', 0.32)); }
   stage.build({ focus }).ready();
 }
 main().catch(e => console.error('BUILD ERROR', e.message, e.stack));

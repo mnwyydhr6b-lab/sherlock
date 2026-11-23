@@ -4,19 +4,25 @@ Diese Datei legt fest, wie die Serie aussieht. **Vor jeder neuen Szene lesen und
 
 ## 1. Der Look in einem Satz
 
-Stilisierte 3D-Videospiel-Welt (Richtung Sims) mit menschennahen Figuren, die bewusst nicht realistisch sind. Weiche Formen, abgerundete Kanten, viele kleine Alltagsdetails aus Deutschland und filmisches Licht.
+**Klötzchen-Figuren in einer detaillierten 3D-Spielwelt:** Die Figuren bestehen aus weichen, abgerundeten Blöcken mit gezeichnetem, ausdrucksstarkem Gesicht. Die Welt dagegen ist eine stilisierte, aber sehr detailreiche deutsche Alltagswelt mit filmischem Licht. Dieser Kontrast ist unser Erkennungszeichen.
+
+- Seit 23.11.2026 (vom Nutzer freigegeben). Die alten menschennahen Figuren (UBC mit Fingern, Kleidungshüllen) sind abgelöst, weil sie immer wieder Fehler hatten (Handy in der Hand, verschwundene Hand, Loch am Hals).
+- Die Welt (Straße, Partyhaus, Zimmer, Schule, alle Details) bleibt unverändert.
 
 ## 2. Referenzbilder (`look/`)
 
 | Datei | Zeigt |
 |---|---|
-| `besetzung.png` | Alle festen Figuren nebeneinander (Kleidung, Frisur, Hautfarbe) |
-| `hauptfigur_du.png` | „Du“ von vorne, schräg, seitlich, hinten (Hoodie mit Kapuze, Kordeln, Bauchtasche) |
+| `besetzung.png` | Alle 8 festen Figuren nebeneinander (Farben, Frisuren, Kleidung) |
+| `hauptfigur_du.png` | „Du“ von vorne, schräg, seitlich, hinten |
+| `mimik.png` | Gesichtsausdrücke von Du und Mia (happy, laugh, sad, angry, surprised, awkward, sideeye, shocked, neutral) |
+| `selbstrespekt.png` | Der Serien-Effekt in 3 Stufen: rot werden → Risse → Blöcke fallen ab |
+| `bewegungen.png` | Härtetest: 16 übertragene Bewegungen an allen Figuren |
 | `set_strasse_nacht.png` | Set 1: Lindenweg nachts, Partyhaus Nr. 7, Gartentor, Ballons, Lichterketten |
 | `set_zimmer_bett.png` / `set_zimmer_schreibtisch.png` | Set 2: Jugendzimmer von „Du“ nachts (LED-Streifen, Gaming-Ecke) |
-| `set_schule_tag.png` | Set 3: Gesamtschule Lindenhof bei Tag, Schulhof mit Tischtennisplatte |
-| `mimik.png` | Gesichtsausdrücke von Du und Mia (neutral, freut sich, lacht, traurig, wütend, überrascht, Seitenblick, peinlich berührt) |
-| `profilbild.png` | Profilbild (Du, verschränkte Arme) |
+| `set_schule_tag.png` | Set 3: Gesamtschule Lindenhof bei Tag, Schulhof |
+| `uebersicht_sets.png` | Alle Sets nebeneinander |
+| `profilbild_regelbuch.png` / `profilbild_schild.png` | Profilbild-Vorschläge (Metapher, ohne Figur) |
 
 Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus demselben Spiel aussieht.
 
@@ -33,12 +39,9 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
   | `tag` | Sonne, Quellwolken |
   | `innen_nacht` | Innenraum, Licht von Lampen |
   | `innen_tag` | Innenraum mit Sonne durchs Fenster |
-  | `studio` | Charakterbögen |
+  | `studio` | Figuren-Tests |
 
-- Fertige Orte kommen aus den Sets:
-  - `set_strasse.js`
-  - `set_zimmer.js`
-  - `set_schule.js`
+- Fertige Orte kommen aus den Sets: `set_strasse.js`, `set_zimmer.js`, `set_schule.js`.
 - Neue Orte nur aus den Baukästen bauen:
   - Innenräume: `kit_interior.js`
   - Häuser: `kit_house.js`
@@ -46,12 +49,34 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
   - Straßenmöbel und Party-Deko: `kit_street.js`
   - Texturen: `kit_world.js`
 
-**Figuren**
-- Nur `spawn('du' | 'ben' | 'leon' | 'mia' | 'jasmin' | 'tarik' | 'mama' | 'papa')` aus `kit_cast.js` verwenden.
-- Kleidung, Farben und Frisuren der festen Figuren **nie** ändern.
-- Statisten mit `makeHuman()` bauen, mit anderen Farben, damit sie nicht wie die feste Besetzung aussehen.
+**Figuren (Klötzchen, `kit_block.js`)**
+- Nur `spawnBlock('du' | 'mia' | 'leon' | 'jasmin' | 'tarik' | 'ben' | 'mama' | 'papa', { x, y, z, ry, anim, time })` verwenden. Aussehen steht in `BLOCK_CAST`.
+- Farben, Frisuren und Kleidung der festen Figuren **nie** ändern.
+- Statisten: `spawnBlock('ben', { spec: { … } })` für Männer bzw. `spawnBlock('mia', { spec: { … } })` für Frauen (der Name bestimmt nur Skelett und Statur), mit eigenen Farben: `spec: { shirt: 0x…, pants: 0x…, hair: 0x…, hairStyle: 'short'|'buzz'|'long'|'bun', top: 'hoodie'|'jacket'|'shirt'|'tee', skin: 0x… }`. Immer andere Farben als die feste Besetzung.
+- Aufbau: Jeder Block hängt starr an einem Knochen des Skeletts. Es gibt keine Finger, keine Haut und keine Kleidungshülle. Deshalb kann nichts durchstechen oder verschwinden.
+- Die Figuren nutzen das Skelett der alten Figuren, darum laufen alle 86 Skelett-Animationen (z. B. `Idle_Loop`, `Walk_Loop`, `Dance_Loop`, `Sitting_Idle_Loop`) und alle Posen-Helfer aus `kit_cast.js` (`sitOn`, `faceTo`, `lookAt`, `holdCup`, `posePhone`).
 
-**Formen und Oberflächen**
+**Mimik**
+- Gesicht: `h.userData.blockFace.set(ausdruck, { talk, blink, look, blush })`
+  - Ausdrücke: `neutral`, `happy`, `laugh`, `sad`, `angry`, `surprised`, `awkward`, `sideeye`, `shocked`, `smirk`
+  - `talk` 0…1 öffnet den Mund (aus der Stimme: `lipAt(t, hüllkurve, start, 0.8)`), `blink` 0/1 (`blinkAt(t, seed)`), `look: [x, y]` Blickrichtung (−1…1), `blush` 0…1 rote Wangen
+  - Im Video jedes Frame neu setzen. Fertige Gesichter werden gecacht, das kostet kaum Zeit.
+- Ganze Figur rot färben: `h.userData.blush(0…1)`.
+- Alte Aufrufe `h.userData.face.expr(...)` / `face.set({ jawOpen, blink })` funktionieren weiter.
+
+**Selbstrespekt-Effekt (unser Twist)**
+- Stufe 1: `blockFace.set('awkward')` + `blush(1)` – peinlich, rot, Schweißtropfen.
+- Stufe 2: `h.userData.crack(0…1)` – Risse im Gesicht, an den Kopfseiten und auf dem Oberteil.
+- Stufe 3: `const fall = h.userData.dropChips(scene, t0, { n: 7 })`, dann jedes Frame `fall(t)` – kleine Blöcke brechen ab, fallen und prallen einmal auf.
+- An den Zähler „SELBSTRESPEKT“ koppeln (siehe `clip_test.html`).
+
+**Bewegungen (Motion-Capture, `kit_retarget.js`)**
+- 26 fertige Bewegungen: `Idle`, `Texting`, `Phone call`, `Talk with gestures`, `Talk`, `Sit idle (chair)`, `Sit down (chair)`, `Stand up (chair)`, `Laugh`, `Laugh hard`, `Cry`, `Wave`, `Point`, `Thumbs up`, `Clap`, `Look around`, `Lean on wall`, `Walk`, `Slouch walk`, `Cheer`, `Dance (groove)`, `Dance (party bounce)`, `Open door`, `Handshake`, `Pick up (ground)`, `Bow`.
+- Standbild: `await loadBlockMoves(); playMove(h, 'Texting', 2.0)`.
+- Video: `await loadBlockMoves(); prepMoves(h, ['Texting', 'Laugh'])`, dann im `Actor` als `{ anim: 'Ara:Texting', at: … }` und jedes Frame `syncPhone(h)` (zeigt das Handy nur während Texting/Phone call).
+- Das Handy liegt dabei richtig in der Hand. Hände an Kopf oder an der anderen Hand werden automatisch nachgeführt.
+
+**Formen und Oberflächen (Welt)**
 - Abgerundete Boxen (`rbox`) statt scharfer Kästen.
 - Flächen immer mit Textur: `triMat` + `T.plaster`, `T.pavers`, `T.laminat` usw.
 - Keine großen einfarbigen, flachen Flächen. Kein facettierter Low-Poly-Look.
@@ -62,44 +87,37 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 - Innen: Licht kommt von sichtbaren Quellen (Lampe, LED, Monitor, Handy).
 - Pink-Licht sparsam einsetzen (`pinkI` ca. 0,7).
 
-**Mimik und Gestik**
-- Emotionen über `face.expr(...)` zeigen, beim Sprechen immer `lipAt` verwenden, alle Figuren blinzeln lassen (`blinkAt`).
-- Starke Gefühle von „Du“ lieber über Ich-Perspektive, Körpersprache (Animationen), Licht und Ton erzählen statt über Großaufnahmen.
-- Fingergesten sind noch nicht verlässlich. Bis der Hand-Baukasten steht, Hände über Animationen und `armIK` führen und keine Fingerposen von Hand bauen.
-
 **Kamera**
 - Format 1080×1920 (Hochkant).
-- Bildwinkel (fov): außen 46–56, innen 52–62.
-- Kamerahöhe 1,5–1,9 m oder Über-die-Schulter.
-- Tiefenschärfe auf den Kopf der Hauptfigur (`stage.build({ focus })`, Blende 0,0006–0,0009).
+- Bildwinkel (fov): außen 44–56, innen 52–62, Gesicht nah 36–42.
+- Kamerahöhe 1,5–1,9 m oder Über-die-Schulter. Für Gefühle nah ans Gesicht gehen: Die Klötzchen-Gesichter sind groß und gut lesbar.
+- Tiefenschärfe auf den Kopf der Hauptfigur (`stage.build({ focus })`).
 
 **Texte in der Welt**
 - Immer Deutsch und mit erfundenen Namen (Lindenweg, Gesamtschule Lindenhof, „Schneider“).
 - Keine echten Marken und keine Logos.
 
 **Verboten**
-- Klötzchen-, Minecraft-, Roblox- und Comic-Look mit Konturlinien
-- Holz-Spielzeug-Look
-- Fotorealismus
-- reines Schwarz in Schatten
-- Neon überall
+- Pixel-Texturen wie Minecraft, Roblox-Look, Comic mit Konturlinien
+- realistische Figuren (getestet und abgelehnt: Ara3D/MakeHuman) und menschennahe Figuren mit Fingern (zu fehleranfällig)
+- Holz-Spielzeug-Welt
+- reines Schwarz in Schatten, Neon überall
 
 ## 4. Arbeitsablauf für jede neue Szene
 
-1. Set und Preset wählen. Figuren mit `spawn` setzen, Posen mit den Helfern:
-   - `posePhone` – Handy halten
-   - `sitOn` – sitzen
+1. Set und Preset wählen. Figuren mit `spawnBlock` setzen, Bewegungen mit `playMove`/`prepMoves`, Posen mit den Helfern:
+   - `sitOn` – sitzen (mit `Sitting_Idle_Loop`)
    - `faceTo` / `lookAt` – Blickrichtung
-   - `holdCup` – Becher halten
-   - `armIK` – Hand an einen Punkt führen
-2. Schneller Test: `node still.js "szene.html?dof=0" test.png 1` (ca. 20 s). Das Bild **ansehen** und mit den Referenzen vergleichen.
+   - `holdCup` – Becher halten, `posePhone` – Handy im Sitzen
+2. Schneller Test: `node still.js "szene.html?dof=0" test.png 0.5` (ca. 15 s). Das Bild **ansehen** und mit den Referenzen vergleichen.
 3. Kamera und Licht nachjustieren. URL-Parameter helfen beim Ausprobieren:
    - Kamera: `cx`, `cy`, `cz`, `tx`, `ty`, `tz`, `fov`
    - Bildlook: `exp`, `sat`, `bloom`, `ap`
 4. Finales Bild: `node still.js "szene.html?hq" out.png 2`, danach mit PIL (Lanczos) auf 1080×1920 verkleinern.
-   - Video: `node render.js szene.html ordner <sekunden> 24` (ohne `hq`, ca. 5,6 s pro Frame), danach ffmpeg wie in `make_clip_test.sh`.
+   - Video: `node render.js szene.html ordner <sekunden> 24` (ohne `hq`), danach ffmpeg wie in `make_clip_test.sh`.
    - Vor dem ersten Video-Frame `stage.limitLights(fokuspunkt, 8)` aufrufen.
-5. Neuer Ort: Referenzbild nach `look/` legen und hier in Abschnitt 2 eintragen.
+5. Figuren-Härtetest bei neuen Bewegungen: `block_lineup.html?moves=…` rendern und prüfen.
+6. Neuer Ort: Referenzbild nach `look/` legen und hier in Abschnitt 2 eintragen.
 
 ## 5. Sets und wichtige Punkte (Anker)
 
@@ -124,6 +142,8 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 - Canvas-Verläufe nach `translate()` werden mitverschoben → Verläufe immer um (0, 0) definieren.
 - Dünne Objekte (Seile, Stangen) mit `cast: false` erzeugen, sonst entstehen Schattenlinien.
 - Fenster-Innenräume leuchten über `setWindowGlow`: nachts ca. 1,25, tags ca. 0,03.
-- Figuren immer zuerst zur Szene hinzufügen, dann posieren (`posePhone` braucht `h.parent`).
+- Figuren immer zuerst zur Szene hinzufügen, dann posieren (`posePhone`, `holdCup` brauchen `h.parent`).
 - Sitzende Figuren: Animation `Sitting_Idle_Loop` und dann `sitOn(h, sitzpunkt)`.
-- Ein Standbild in doppelter Auflösung dauert 30–60 s. Tests deshalb mit Faktor 1 und `dof=0`.
+- Der Klötzchen-Kopf ist groß: Bei Bewegungen mit Hand am Kopf (Phone call, Cry) und bei hohen Stuhllehnen kurz im Testbild prüfen.
+- URL-Parameter `ty` ist für die Kamera reserviert (Blickziel), nicht für eigene Zwecke verwenden.
+- Ein Standbild in doppelter Auflösung dauert 30–60 s. Tests deshalb mit Faktor 0,5 und `dof=0`.

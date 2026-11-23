@@ -12,6 +12,7 @@
 <script type="module">
 // Referenz "Jugendzimmer nachts": Du sitzt auf der Bettkante und schreibt (Folge 2 / 8)
 import * as THREE from 'three';
+import { spawnBlock } from './kit_block.js';
 import { createStage } from './kit_look.js';
 import { buildZimmer, ZANCHOR } from './set_zimmer.js';
 import { loadHumanAssets, spawn, posePhone, sitOn, lookAt } from './kit_cast.js';
@@ -26,17 +27,17 @@ async function main() {
     await loadHumanAssets();
     let du;
     if (shot === 'bett') {
-      du = spawn('du', { anim: 'Sitting_Idle_Loop', time: qn('st', 0.8), x: 0, y: 0, z: 0, ry: qn('hry', 1.19) }); scene.add(du);
+      du = spawnBlock('du', { anim: 'Sitting_Idle_Loop', time: qn('st', 0.8), x: 0, y: 0, z: 0, ry: qn('hry', 1.19) }); scene.add(du);
       sitOn(du, new THREE.Vector3(qn('sx', ZANCHOR.bedSide.x), qn('sy', ZANCHOR.bedSide.y), qn('sz', ZANCHOR.bedSide.z)));
-      posePhone(du, { forward: qn('pf', 0.28), height: qn('ph', -0.06), neck: 0.2, head: 0.3, light: 0.03 });
+      posePhone(du, { forward: qn('pf', 0.28), height: qn('ph', -0.06), neck: 0.2, head: 0.3, light: 0.03 }); du.userData.blockFace.set(Q.get('expr') || 'sad', { look: [0, 0.7] });
     } else {
       Z.chair.rotation.y = Math.PI / 2; Z.chair.position.set(1.15, 0, 0.42); Z.chair.updateMatrixWorld(true);
-      du = spawn('du', { anim: 'Sitting_Idle_Loop', time: 0.8, x: 0, y: 0, z: 0, ry: Math.PI / 2 }); scene.add(du);
+      du = spawnBlock('du', { anim: 'Sitting_Idle_Loop', time: 0.8, x: 0, y: 0, z: 0, ry: Math.PI / 2 }); scene.add(du);
       sitOn(du, ZANCHOR.chairSeat);
       const down = new THREE.Vector3(0, -1, 0);
       armIK(du, 'l', ZANCHOR.keyboard.clone().add(new THREE.Vector3(-0.05, 0.03, 0.02)), down.clone().add(new THREE.Vector3(-0.2, 0, -0.6)));
       armIK(du, 'r', ZANCHOR.mouse.clone().add(new THREE.Vector3(-0.06, 0.03, 0)), down.clone().add(new THREE.Vector3(-0.2, 0, 0.6)));
-      lookAt(du, ZANCHOR.monitor, 0.8);
+      lookAt(du, ZANCHOR.monitor, 0.8); du.userData.blockFace.set(Q.get('expr') || 'neutral');
     }
     focus = du.userData.bones.Head.getWorldPosition(new THREE.Vector3());
   }
