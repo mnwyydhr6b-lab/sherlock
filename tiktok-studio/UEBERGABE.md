@@ -80,7 +80,7 @@
 
 **Befehle**
 
-- Standbild rendern (Szenen-Seiten: `spielwelt.html`, `zimmer.html?shot=bett|desk`, `schule.html`; Figuren-Tests: `block_lineup.html` mit Breite/Höhe 1920 1080, `block_test.html?shot=strasse|nah|peinlich|risse`):
+- Standbild rendern (Szenen-Seiten: `spielwelt.html`, `zimmer.html?shot=bett|desk`, `schule.html`; Figuren-Tests: `block_lineup.html` mit Breite/Höhe 1920 1080, `block_test.html?shot=strasse|nah|peinlich`):
   ```
   node still.js "spielwelt.html" out.png 2
   node still.js "block_lineup.html?moves=Texting,Laugh" out.png 1 1920 1080
@@ -223,6 +223,7 @@
 - [x] Länge der Folgen: 50 s bis 10k, danach 61–70 s
 - [x] Account: bestehender Account wird weitergenutzt
 - [ ] Kanal-Auftritt: Anzeigename, Bio, Profilbild; alte, unpassende Videos auf „Nur ich“ stellen (Nutzer entscheidet)
+  - Vorschlag (noch nicht bestätigt): Anzeigename **„Ungeschriebene Regeln“**, Bio **„Regeln, die dir keiner sagt. 🧱 Jeden Tag eine neue Folge.“** (57 von 80 Zeichen)
   - Profilbild: Reine Metaphern (leeres Regelbuch, Schild) hat der Nutzer abgelehnt. Gewünscht: **Klötzchen-Du + Regel-Motiv**. Vorschläge in `look/profilbild_klotz_vorschau.png` (A Regelbuch mit §, B Karte „Regel Nr. ?“, C verrät eine Regel), Szene `profil_klotz.html?v=buch|karte|fluestern` (`&hq`, 2× rendern, auf 1080×1080 verkleinern). **Auswahl steht noch aus.**
 - [x] Folgenliste → `folgenliste.md`. Der Nutzer hat **1, 3, 4, 9 und 10** als Start-Folgen gewählt (⭐).
 - [~] Skripte: Entwurf Folge 1 (50 s) in `skripte/folge01_regel1.md`. **Hook und Aufbau will der Nutzer pro Folge gemeinsam festlegen**, deshalb ist der Entwurf nicht final.
@@ -264,7 +265,7 @@
    - Datei `folgeNN.mp4` committen und dem Nutzer schicken
 
 **Noch offen** (kann parallel laufen)
-- Kanal-Auftritt: Anzeigename, Bio, Profilbild (Metapher A oder B auswählen lassen)
+- Kanal-Auftritt: Anzeigename, Bio, Profilbild (Klötzchen-Vorschlag A, B oder C auswählen lassen)
 - Posting-Plan:
   - Uhrzeiten, Captions, Hashtags
   - einheitliche Titelbilder „Regel Nr. X“
