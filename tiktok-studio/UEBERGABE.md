@@ -219,6 +219,7 @@
 - Will eigene Figuren und Details – „die Details machen es aus“.
 - Will auf Deutsch kurz und klar informiert werden.
 - Antwortet manchmal nicht auf Auswahl-Dialoge; dann einfache Textoptionen anbieten.
+- **Keine Testbilder schicken (Nutzer 23.11.):** Claude prüft die Testbilder selbst und schickt nur das fertige Video. Nur bei echten Entscheidungen fragen.
 - **Fehler im Bild stören ihn sehr** (fehlende Hand, Handy durch die Hand, Loch am Hals). Vor jedem Zeigen Testbilder selbst genau prüfen, besonders Hände, Hals, Handy und Kopf.
 - Will auffallen, aber **ohne Spielereien**: Klötzchen-Figuren in der detaillierten Welt, Ego-Perspektive, normales Format. Vorgeschlagene Effekte (Risse, abfallende Blöcke, Glas-Sprünge) hat er abgelehnt.
 
@@ -265,7 +266,7 @@
    - Gesichter jedes Frame mit `blockFace.set(ausdruck, { blink: blinkAt(t, seed), talk: lipAt(...) })`
    - Kamera in Ego-Perspektive über `povPose` (siehe `clip_test.html`), Overlay über `kit_hud`
    - Testbilder genau prüfen (Hände, Handy, Kopf), erst dann rendern
-4. Testbilder an markanten Zeitpunkten rendern, ansehen und Feedback holen.
+4. Testbilder an markanten Zeitpunkten rendern und selbst genau prüfen (nicht schicken, Nutzer 23.11.).
 5. Video rendern (24 fps, ca. 2 h im Hintergrund).
 6. Stimmen und Geräusche mit ElevenLabs erzeugen und mischen (wie in `make_clip_test.sh`).
    - Lautheit auf −16 LUFS
