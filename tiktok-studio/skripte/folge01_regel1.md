@@ -1,6 +1,6 @@
 # Folge 1 – „Wenn du nicht eingeladen bist, geh nicht hin.“ (50 s, Ego-Perspektive)
 
-> Stand 23.11.2026. Hook und Ablauf mit dem Nutzer festgelegt. **Offen: Story-Ende (36–44 s) und einheitliche Endkarte** (Vorschläge unten).
+> Stand 23.11.2026. Hook und Ablauf mit dem Nutzer festgelegt. Story-Ende: Vorschlag 1 (Nutzer 23.11.). **Offen: einheitliche Endkarte** (Vorschlag unten).
 > Produktion: 24.11. (Wochenlimit am 23.11. bei 96 %).
 
 ## Rahmen
@@ -41,9 +41,8 @@
 - Blick auf das Gruppenfoto „DIE GANG ♥“, er ist nicht drauf.
 - Flüstern: „Wer hat den eingeladen?“ → **19**
 
-**36–44 s · Story-Ende – OFFEN**
-- Vorschlag 1: Leon kommt: „Ey … ist heute eher so ’n kleiner Kreis.“ Du geht raus, die Tür fällt hinter ihm zu, drinnen wird die Musik wieder laut. Untertitel: „Die Party ging weiter. Nur ohne dich.“ → **5**
-- Vorschlag 2: Du steht allein in der Ecke mit Becher, alle feiern um ihn herum. Untertitel: „Du warst da. Aber keiner wollte dich da.“ → **5**
+**36–44 s · Story-Ende (entschieden 23.11.)**
+- Leon kommt: „Ey … ist heute eher so ’n kleiner Kreis.“ Du geht raus, die Tür fällt hinter ihm zu, drinnen wird die Musik wieder laut. Untertitel: „Die Party ging weiter. Nur ohne dich.“ → **5**
 
 **44–50 s · Endkarte – OFFEN (soll in jeder Folge gleich sein)**
 - Vorschlag: dunkles Overlay → klein „REGEL NR. 1“ → Regel groß in Weiß: „Wenn du nicht eingeladen bist, geh nicht hin.“ → gelbe kursive Frage: „Wärst du trotzdem hingegangen?“ → klein unten: „Folge für Regel Nr. 2“.
@@ -53,7 +52,7 @@
 - Du `UFMIjG2r9JyefPpfkQoL`: „Ach, ich geh mal kurz abchecken.“, „Hey, na?“, „Geile Party!“, „Anstoßen?“
 - Jasmin (Stimme noch wählen): „… Danke.“
 - Mia (Stimme noch wählen): „Ne, passt schon.“
-- Leon `IeQubAjK1ujbppIdhJw4`: nur bei Ende-Vorschlag 1
+- Leon `IeQubAjK1ujbppIdhJw4`: „Ey … ist heute eher so ’n kleiner Kreis.“
 - Flüstern `RMDEjuHXo5bcQLkbu6MB`: „[whispers] Wer hat den eingeladen?“
 
 ## Caption-Vorschlag
