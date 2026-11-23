@@ -16,7 +16,6 @@ Diese Datei legt fest, wie die Serie aussieht. **Vor jeder neuen Szene lesen und
 | `besetzung.png` | Alle 8 festen Figuren nebeneinander (Farben, Frisuren, Kleidung) |
 | `hauptfigur_du.png` | „Du“ von vorne, schräg, seitlich, hinten |
 | `mimik.png` | Gesichtsausdrücke von Du und Mia (happy, laugh, sad, angry, surprised, awkward, sideeye, shocked, neutral) |
-| `selbstrespekt.png` | Der Serien-Effekt in 3 Stufen: rot werden → Risse → Blöcke fallen ab |
 | `bewegungen.png` | Härtetest: 16 übertragene Bewegungen an allen Figuren |
 | `set_strasse_nacht.png` | Set 1: Lindenweg nachts, Partyhaus Nr. 7, Gartentor, Ballons, Lichterketten |
 | `set_zimmer_bett.png` / `set_zimmer_schreibtisch.png` | Set 2: Jugendzimmer von „Du“ nachts (LED-Streifen, Gaming-Ecke) |
@@ -61,14 +60,9 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
   - Ausdrücke: `neutral`, `happy`, `laugh`, `sad`, `angry`, `surprised`, `awkward`, `sideeye`, `shocked`, `smirk`
   - `talk` 0…1 öffnet den Mund (aus der Stimme: `lipAt(t, hüllkurve, start, 0.8)`), `blink` 0/1 (`blinkAt(t, seed)`), `look: [x, y]` Blickrichtung (−1…1), `blush` 0…1 rote Wangen
   - Im Video jedes Frame neu setzen. Fertige Gesichter werden gecacht, das kostet kaum Zeit.
-- Ganze Figur rot färben: `h.userData.blush(0…1)`.
 - Alte Aufrufe `h.userData.face.expr(...)` / `face.set({ jawOpen, blink })` funktionieren weiter.
 
-**Selbstrespekt-Effekt (unser Twist)**
-- Stufe 1: `blockFace.set('awkward')` + `blush(1)` – peinlich, rot, Schweißtropfen.
-- Stufe 2: `h.userData.crack(0…1)` – Risse im Gesicht, an den Kopfseiten und auf dem Oberteil.
-- Stufe 3: `const fall = h.userData.dropChips(scene, t0, { n: 7 })`, dann jedes Frame `fall(t)` – kleine Blöcke brechen ab, fallen und prallen einmal auf.
-- An den Zähler „SELBSTRESPEKT“ koppeln (siehe `clip_test.html`).
+**Keine Extra-Effekte** (Nutzer-Entscheidung 23.11.): keine Risse, keine abfallenden Blöcke, kein Glas-Splitter-Bild. Es bleibt beim normalen Format: Zähler „SELBSTRESPEKT“ mit rotem Blinken beim Abfall, Untertitel, Endkarte. Gefühle zeigen die Gesichter der Figuren.
 
 **Bewegungen (Motion-Capture, `kit_retarget.js`)**
 - 26 fertige Bewegungen: `Idle`, `Texting`, `Phone call`, `Talk with gestures`, `Talk`, `Sit idle (chair)`, `Sit down (chair)`, `Stand up (chair)`, `Laugh`, `Laugh hard`, `Cry`, `Wave`, `Point`, `Thumbs up`, `Clap`, `Look around`, `Lean on wall`, `Walk`, `Slouch walk`, `Cheer`, `Dance (groove)`, `Dance (party bounce)`, `Open door`, `Handshake`, `Pick up (ground)`, `Bow`.
@@ -87,11 +81,18 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 - Innen: Licht kommt von sichtbaren Quellen (Lampe, LED, Monitor, Handy).
 - Pink-Licht sparsam einsetzen (`pinkI` ca. 0,7).
 
-**Kamera**
+**Kamera – Ego-Perspektive (Standard)**
+- Die Serie wird **aus der Sicht von „Du“** erzählt: Der Zuschauer sieht, was Du sieht. Du selbst sieht man nicht (höchstens Hände, Handy und Hoodie, wenn er nach unten schaut).
+- `povHide(du)` blendet Kopf und Haare von Du aus. Kamera pro Frame mit `povPose(du, …)` → `{ eye, dir }`:
+  - Gehen/Stehen: `povPose(du, { steady: true, pitch: -0.06, bob: 0.012, t })` – ruhige Kamera auf Augenhöhe, leichtes Wippen beim Gehen
+  - Kopf folgt der Animation: `povPose(du)`; Blick aufs Handy: Richtung auf `du.getObjectByName('AraPhone_l')` (+9 cm nach oben) setzen
+  - Blick zu Personen: `dir` zum Kopf/Gesicht der Person hin mischen (die anderen reagieren mit ihren Gesichtern)
+  - Übergänge mit `smooth()` zwischen den Blickrichtungen mischen (siehe `clip_test.html`), Bildwinkel 60–70
+  - Schnell testen: `pov_test.html?shot=leute|handy`
 - Format 1080×1920 (Hochkant).
 - Bildwinkel (fov): außen 44–56, innen 52–62, Gesicht nah 36–42.
-- Kamerahöhe 1,5–1,9 m oder Über-die-Schulter. Für Gefühle nah ans Gesicht gehen: Die Klötzchen-Gesichter sind groß und gut lesbar.
-- Tiefenschärfe auf den Kopf der Hauptfigur (`stage.build({ focus })`).
+- Gegenüber stehende Figuren so platzieren, dass ihre Gesichter gut im Bild sind: Ihre Reaktionen erzählen die Geschichte.
+- Tiefenschärfe auf das, was Du gerade ansieht (`stage.setFocus(punkt)`): Gesicht der Person oder Handy.
 
 **Texte in der Welt**
 - Immer Deutsch und mit erfundenen Namen (Lindenweg, Gesamtschule Lindenhof, „Schneider“).

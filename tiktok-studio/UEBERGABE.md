@@ -30,7 +30,7 @@
   - Hook draußen: Er läuft, sieht Leons Party-Story und geht innerhalb von 5 s hin.
   - Zähler **„Selbstrespekt“** oben im Bild fällt in Stufen (100 → 85 → 72 → 55 → 38 → 19 → 5 %) und blinkt rot bei jedem Abfall.
   - Mit dem Zähler verliert die Welt Farbe (Sättigung sinkt).
-  - **Selbstrespekt sichtbar an „Du“ (seit 23.11.):** erst rote Wangen, dann Risse, bei einem großen Fehler brechen Blöcke ab und fallen zu Boden (Referenz: `look/selbstrespekt.png`).
+  - **Ego-Perspektive:** Alles wird aus der Sicht von „Du“ gezeigt. Keine Extra-Effekte (keine Risse o. Ä., Nutzer 23.11.: „Es soll alles normal bleiben.“).
   - Figuren sprechen nur kurze Sätze (ElevenLabs).
   - Erzähler-Untertitel in kurzen Sätzen.
   - **Ende wie im „9 Schüsse“-Video:**
@@ -88,7 +88,7 @@
   Danach mit PIL (Lanczos) von 2160×3840 auf 1080×1920 verkleinern.
 - Video rendern:
   - Befehl: `node render.js clip_test.html <ordner> <sekunden> 24` → JPG-Bildfolge, danach mit ffmpeg zu MP4 (komplett: `./make_clip_test.sh`).
-  - **Vorlage für jede Folge: `clip_test.html`** (9,6-s-Testclip mit Klötzchen: Du läuft zur Party, bleibt am Tor stehen, holt das Handy raus (`Ara:Texting`), wird rot, bekommt Risse, Blöcke fallen; Gäste tanzen und reden, alle blinzeln; Kamerafahrt, Zähler und Untertitel).
+  - **Vorlage für jede Folge: `clip_test.html`** (9,6-s-Testclip in Ego-Perspektive mit Klötzchen: Du geht zur Party, bleibt am Tor stehen und schaut zu den Gästen, deren Gesichter umschlagen, der Zähler fällt, dann Blick aufs Handy in seinen Händen (`Ara:Texting`); Zähler und Untertitel).
   - `kit_anim.js`:
     - `Actor`: Animationen mit Überblendung, Laufweg, Drehung, `after`-Hook für Kopf/IK
     - `clipSpeed`: Laufgeschwindigkeit messen, damit die Füße nicht rutschen
@@ -130,7 +130,7 @@
 - `kit_look.js` – `createStage({ preset })`: Renderer, Himmel, Licht und Nachbearbeitung als feste Presets.
   - Presets: `nacht`, `abend`, `tag`, `innen_nacht`, `innen_tag`, `studio`
   - Methoden: `view()`, `build({ focus })`, `aimKey()`, `ready()`
-- `kit_block.js` – **die Figuren der Serie:** `spawnBlock(name)`, Gesicht `blockFace.set()`, `blush()`, `crack()`, `dropChips()`, Bewegungen `loadBlockMoves()` / `playMove()` / `prepMoves()` / `syncPhone()`. Details in `LOOK_BIBEL.md`.
+- `kit_block.js` – **die Figuren der Serie:** `spawnBlock(name)`, Gesicht `blockFace.set()`, Bewegungen `loadBlockMoves()` / `playMove()` / `prepMoves()` / `syncPhone()`, Ego-Perspektive `povHide()` / `povPose()` / `povCamera()`. Details in `LOOK_BIBEL.md`.
 - `kit_retarget.js` + `assets/moves/` – 26 Motion-Capture-Bewegungen (Ara3D-Bibliothek, CMU-Mocap, kommerziell nutzbar) werden auf unser Skelett übertragen. Neu erzeugen: `./make_moves.sh` (braucht npm und GitHub).
 - `kit_cast.js` – Skelett/Grunddaten der Besetzung (`spawn` wird intern von `spawnBlock` genutzt), plus Posen-Helfer:
   - `posePhone` (Handy halten), `holdCup` (Becher halten), `sitOn` (sitzen)
@@ -215,7 +215,7 @@
 - Will auf Deutsch kurz und klar informiert werden.
 - Antwortet manchmal nicht auf Auswahl-Dialoge; dann einfache Textoptionen anbieten.
 - **Fehler im Bild stören ihn sehr** (fehlende Hand, Handy durch die Hand, Loch am Hals). Vor jedem Zeigen Testbilder selbst genau prüfen, besonders Hände, Hals, Handy und Kopf.
-- Will auffallen: eigener Twist statt Standard-Look (deshalb Klötzchen + Selbstrespekt-Effekt + detaillierte Welt).
+- Will auffallen, aber **ohne Spielereien**: Klötzchen-Figuren in der detaillierten Welt, Ego-Perspektive, normales Format. Vorgeschlagene Effekte (Risse, abfallende Blöcke, Glas-Sprünge) hat er abgelehnt.
 
 ## 6. Vorbereitung bis zum Start (Checkliste)
 
@@ -230,7 +230,7 @@
 - [ ] Posting-Plan: Uhrzeiten, Captions, Hashtags, Titelbilder, KI-Kennzeichnung
 - [x] Animations-System für die Spielwelt (`kit_anim.js`, `kit_hud.js`) und Testclip `clip_test.mp4`
 - [x] Look-Baukasten, feste Besetzung und drei Sets (Straße, Jugendzimmer, Schule) mit Referenzbildern in `look/`
-- [x] **Klötzchen-Figuren** (`kit_block.js`): ganze Besetzung, Mimik, Selbstrespekt-Effekt, 26 Bewegungen, Härtetest (`look/bewegungen.png`), Szenen und Video-Vorlage umgestellt (23.11.)
+- [x] **Klötzchen-Figuren** (`kit_block.js`): ganze Besetzung, Mimik, 26 Bewegungen, Härtetest (`look/bewegungen.png`), Szenen umgestellt, Video-Vorlage in Ego-Perspektive (23.11.)
 - [x] `LOOK_BIBEL.md`: Regeln und Arbeitsablauf für neue Orte
 - [ ] Handy-Chat-Overlay (2D-Einblendung für Chat- und Story-Szenen)
 - [ ] Optional: Vorrat an fertigen Videos für die erste Woche
@@ -255,8 +255,7 @@
 3. Szene als `folgeNN.html` nach dem Muster von `clip_test.html` anlegen:
    - Figuren mit `spawnBlock`, Bewegungen mit `prepMoves` + `Actor` (`anim: 'Ara:…'` oder Skelett-Clips wie `Walk_Loop`), jedes Frame `syncPhone`
    - Gesichter jedes Frame mit `blockFace.set(ausdruck, { blink: blinkAt(t, seed), talk: lipAt(...) })`
-   - Selbstrespekt-Effekt an den Zähler koppeln (`blush`, `crack`, `dropChips`)
-   - Kamera über `cameraAt`, Overlay über `kit_hud`
+   - Kamera in Ego-Perspektive über `povPose` (siehe `clip_test.html`), Overlay über `kit_hud`
    - Testbilder genau prüfen (Hände, Handy, Kopf), erst dann rendern
 4. Testbilder an markanten Zeitpunkten rendern, ansehen und Feedback holen.
 5. Video rendern (24 fps, ca. 2 h im Hintergrund).

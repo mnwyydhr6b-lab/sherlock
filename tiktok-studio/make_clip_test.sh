@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Testclip bauen: Frames rendern, Ton mischen, MP4 erzeugen.  Aufruf: ./make_clip_test.sh [ordner]
-set -euo pipefail; cd "$(dirname "$0")"; F=${1:-/tmp/clip_frames}; D=9.6
+set -euo pipefail; cd "$(dirname "$0")"; F=${1:-/tmp/clip_frames}; D=10.2
 node render.js clip_test.html "$F" $D 24
-# Ton: Nacht-Atmo, gedämpfte Partymusik (wird lauter), Partygemurmel, Schritte bis zum Stehenbleiben (~5,8 s), dumpfer Schlag bei den Zähler-Abfällen (~7,0 s und ~8,0 s: Risse, Blöcke fallen)
+# Ton: Nacht-Atmo, gedämpfte Partymusik (wird lauter), Partygemurmel, Schritte bis zum Stehenbleiben (~5,8 s), dumpfer Schlag bei den Zähler-Abfällen (~7,2 s und ~9,0 s)
 ffmpeg -y -v error -i audio/night_amb.mp3 -i audio/music.mp3 -i audio/crowd.mp3 -i audio/steps_walk.mp3 -i audio/hit.mp3 -i audio/hit.mp3 -filter_complex "\
-[0]volume=0.28[a];[1]lowpass=f=520,volume='0.05+0.11*t/9.6':eval=frame[b];[2]lowpass=f=1400,volume='0.03+0.05*t/9.6':eval=frame[c];\
-[3]atrim=0:5.9,afade=t=out:st=5.3:d=0.6,volume=0.6[d];[4]adelay=6970|6970,volume=0.75[e];[5]adelay=7970|7970,volume=0.9[f];\
-[a][b][c][d][e][f]amix=inputs=6:normalize=0,atrim=0:$D,afade=t=out:st=9.0:d=0.6[out]" -map "[out]" -c:a pcm_s16le "$F/../clip_test_mix.wav"
+[0]volume=0.28[a];[1]lowpass=f=520,volume='0.05+0.11*t/10.2':eval=frame[b];[2]lowpass=f=1400,volume='0.03+0.05*t/10.2':eval=frame[c];\
+[3]atrim=0:5.9,afade=t=out:st=5.3:d=0.6,volume=0.6[d];[4]adelay=7170|7170,volume=0.75[e];[5]adelay=8970|8970,volume=0.8[f];\
+[a][b][c][d][e][f]amix=inputs=6:normalize=0,atrim=0:$D,afade=t=out:st=9.6:d=0.6[out]" -map "[out]" -c:a pcm_s16le "$F/../clip_test_mix.wav"
 ffmpeg -y -v error -framerate 24 -i "$F/f%05d.jpg" -i "$F/../clip_test_mix.wav" -c:v libx264 -preset slow -crf 17 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart clip_test_raw.mp4
 ffmpeg -y -v error -i clip_test_raw.mp4 -c:v copy -af "loudnorm=I=-16:TP=-1.5:LRA=11" -c:a aac -b:a 192k -movflags +faststart clip_test.mp4 && rm clip_test_raw.mp4
 echo "fertig: clip_test.mp4"
