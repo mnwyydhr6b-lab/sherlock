@@ -246,7 +246,7 @@
 
 | Tag | Folge | Drehorte | Neu zu bauen |
 |---|---|---|---|
-| Mo 23.11. | ⭐ 1 – Nicht eingeladen → nicht hingehen | Jugendzimmer, Straße, Partyhaus innen | **Party-Wohnzimmer**, Handy-Story-Einblendung |
+| Mo 23.11. | ⭐ 1 – Nicht eingeladen → nicht hingehen | Jugendzimmer, Straße, Partyhaus innen | **Party-Wohnzimmer** (Leons Story auf dem Handy ist fertig: `povPhoneRig` + `partyStoryTex`) |
 | Di 24.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen | Straße nachts (`party: false`), Fußweg | ggf. dunkler Fußweg/Park |
 | Mi 25.11. | ⭐ 4 – Wer mit dir lästert, lästert auch über dich | Schulhof (Tag) | ggf. Ecke/Flur zum Belauschen |
 | Do 26.11. | ⭐ 9 – Steh nicht daneben | Bushaltestelle, Bus | **Bus innen** |
@@ -259,6 +259,7 @@
 2. Fehlende Drehorte mit den Baukästen bauen. Referenzbild nach `look/` legen und in der Look-Bibel eintragen.
 3. Szene als `folgeNN.html` nach dem Muster von `clip_test.html` anlegen:
    - Figuren mit `spawnBlock`, Bewegungen mit `prepMoves` + `Actor` (`anim: 'Ara:…'` oder Skelett-Clips wie `Walk_Loop`), jedes Frame `syncPhone`
+   - Handy-Momente in der Ego-Perspektive mit `povPhoneRig`; Chats mit `chatTex` + `ph.setScreen` (Nachrichten nacheinander, siehe `chat_test.html`)
    - Gesichter jedes Frame mit `blockFace.set(ausdruck, { blink: blinkAt(t, seed), talk: lipAt(...) })`
    - Kamera in Ego-Perspektive über `povPose` (siehe `clip_test.html`), Overlay über `kit_hud`
    - Testbilder genau prüfen (Hände, Handy, Kopf), erst dann rendern
