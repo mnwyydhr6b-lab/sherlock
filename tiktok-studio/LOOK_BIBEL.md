@@ -21,7 +21,7 @@ Diese Datei legt fest, wie die Serie aussieht. **Vor jeder neuen Szene lesen und
 | `set_zimmer_bett.png` / `set_zimmer_schreibtisch.png` | Set 2: Jugendzimmer von „Du“ nachts (LED-Streifen, Gaming-Ecke) |
 | `set_schule_tag.png` | Set 3: Gesamtschule Lindenhof bei Tag, Schulhof |
 | `uebersicht_sets.png` | Alle Sets nebeneinander |
-| `profilbild_regelbuch.png` / `profilbild_schild.png` | Profilbild-Vorschläge (Metapher, ohne Figur) |
+| `profilbild_klotz_vorschau.png` | Profilbild-Vorschläge mit Klötzchen-Du + Regel-Motiv (A Regelbuch, B „Regel Nr. ?“, C verrät eine Regel), Szene `profil_klotz.html?v=buch|karte|fluestern` |
 
 Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus demselben Spiel aussieht.
 

@@ -223,7 +223,7 @@
 - [x] Länge der Folgen: 50 s bis 10k, danach 61–70 s
 - [x] Account: bestehender Account wird weitergenutzt
 - [ ] Kanal-Auftritt: Anzeigename, Bio, Profilbild; alte, unpassende Videos auf „Nur ich“ stellen (Nutzer entscheidet)
-  - Profilbild: **Metapher statt Figur** (Nutzerwunsch). Vorschläge: A „Das leere Regelbuch“ (`look/profilbild_regelbuch.png`, Empfehlung) oder B „Schild ohne Aufschrift“ (`look/profilbild_schild.png`), Szene `profil_metapher.html?v=buch|schild`. **Auswahl steht noch aus.**
+  - Profilbild: Reine Metaphern (leeres Regelbuch, Schild) hat der Nutzer abgelehnt. Gewünscht: **Klötzchen-Du + Regel-Motiv**. Vorschläge in `look/profilbild_klotz_vorschau.png` (A Regelbuch mit §, B Karte „Regel Nr. ?“, C verrät eine Regel), Szene `profil_klotz.html?v=buch|karte|fluestern` (`&hq`, 2× rendern, auf 1080×1080 verkleinern). **Auswahl steht noch aus.**
 - [x] Folgenliste → `folgenliste.md`. Der Nutzer hat **1, 3, 4, 9 und 10** als Start-Folgen gewählt (⭐).
 - [~] Skripte: Entwurf Folge 1 (50 s) in `skripte/folge01_regel1.md`. **Hook und Aufbau will der Nutzer pro Folge gemeinsam festlegen**, deshalb ist der Entwurf nicht final.
 - [ ] Serien-Bibel: Hauptfigur, wiederkehrende Figuren, Orte, Stimmen, Musik, Ende-Karte
