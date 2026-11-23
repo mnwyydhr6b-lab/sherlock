@@ -232,12 +232,12 @@
 - [x] Folgenliste → `folgenliste.md`. Der Nutzer hat **1, 3, 4, 9 und 10** als Start-Folgen gewählt (⭐).
 - [~] Skripte: Entwurf Folge 1 (50 s) in `skripte/folge01_regel1.md`. **Hook und Aufbau will der Nutzer pro Folge gemeinsam festlegen**, deshalb ist der Entwurf nicht final.
 - [ ] Serien-Bibel: Hauptfigur, wiederkehrende Figuren, Orte, Stimmen, Musik, Ende-Karte
-- [ ] Posting-Plan: Uhrzeiten, Captions, Hashtags, Titelbilder, KI-Kennzeichnung
+- [ ] Posting-Plan: Uhrzeiten, Captions, Hashtags, Titelbilder, KI-Kennzeichnung (Nutzer 23.11.: „jetzt nicht so wichtig“)
 - [x] Animations-System für die Spielwelt (`kit_anim.js`, `kit_hud.js`) und Testclip `clip_test.mp4`
 - [x] Look-Baukasten, feste Besetzung und drei Sets (Straße, Jugendzimmer, Schule) mit Referenzbildern in `look/`
 - [x] **Klötzchen-Figuren** (`kit_block.js`): ganze Besetzung, Mimik, 26 Bewegungen, Härtetest (`look/bewegungen.png`), Szenen umgestellt, Video-Vorlage in Ego-Perspektive (23.11.)
 - [x] `LOOK_BIBEL.md`: Regeln und Arbeitsablauf für neue Orte
-- [ ] Handy-Chat-Overlay (2D-Einblendung für Chat- und Story-Szenen)
+- [~] Handy-Chat (23.11.): `chatTex()` in `kit_block.js` zeichnet Chats (Nachrichten, „Gelesen“, „schreibt …“), Beispiel `chat_test.html?mode=hand|overlay`: **1 im Handy in deinen Händen** (`phone.set(1, 1)` holt es zum Lesen näher) oder **2 groß eingeblendet**. Auswahl des Nutzers offen.
 - [ ] Optional: Vorrat an fertigen Videos für die erste Woche
 
 ## 7. Nächste Schritte
@@ -269,11 +269,11 @@
    - Datei `folgeNN.mp4` committen und dem Nutzer schicken
 
 **Noch offen** (kann parallel laufen)
-- Posting-Plan:
+- Handy-Chat: Nutzer wählt Variante 1 (im Handy) oder 2 (groß eingeblendet), siehe `chat_test.html`. Chats kommen u. a. in Folge 2, 3 (letzte Nachricht) und 6 vor.
+- Posting-Plan (niedrige Priorität):
   - Uhrzeiten, Captions, Hashtags
   - einheitliche Titelbilder „Regel Nr. X“
   - KI-Kennzeichnung (KI-Stimmen) in TikTok prüfen
-- Handy-Chat-Einblendung (für Folgen mit Chats)
 
 ## 8. So startet der neue Chat
 

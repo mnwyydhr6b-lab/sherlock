@@ -222,7 +222,32 @@ export function povPhoneRig(stage, h, { screen = null, screenColor = 0x9ad0ff, t
   const glow = new THREE.PointLight(0xffc8e8, 0.025, 0.5, 2); glow.position.set(0, 0.02, 0.1); ph.add(glow);
   cam.add(g); g.visible = false;
   const down = new THREE.Vector3(0.02, -0.5, -0.33), up = new THREE.Vector3(0.0, -0.085, -0.33);
-  return { group: g, set(k) { g.visible = k > 0.005; const s = k * k * (3 - 2 * k); g.position.lerpVectors(down, up, s); g.rotation.z = (1 - s) * 0.18; } };
+  const near = new THREE.Vector3(0.0, -0.048, -0.245); // zum Lesen näher an die Augen (Chats)
+  return { group: g, set(k, zoom = 0) { g.visible = k > 0.005; const s = k * k * (3 - 2 * k), z = zoom * zoom * (3 - 2 * zoom); g.position.lerpVectors(down, up, s).lerp(near, z * s); g.rotation.z = (1 - s) * 0.18; } };
+}
+// Bildschirm-Inhalt: Chat (Messenger, dunkel). msgs: [{ me, text, time }], seen: 'Gelesen 22:14', typing: true = „schreibt …“-Blase.
+// Große Schrift, damit man es im Video lesen kann. Gibt eine CanvasTexture zurück (.image = Canvas, auch für 2D-Einblendungen nutzbar).
+export function chatTex({ name = 'Mia', status = 'online', avatar = 0xa8482a, clock = '22:14', msgs = [], seen = '', typing = false } = {}) {
+  const K = 2, W = 330, H = 710, c = document.createElement('canvas'); c.width = W * K; c.height = H * K; const g = c.getContext('2d'); g.scale(K, K);
+  const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#12161f'); bg.addColorStop(1, '#0b0e14'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#e8eaf0'; g.font = '600 15px Inter, sans-serif'; g.textBaseline = 'middle'; g.fillText(clock, 22, 18); rr(W - 46, 11, 26, 13, 3); g.strokeStyle = '#e8eaf0'; g.lineWidth = 1.5; g.stroke(); g.fillRect(W - 44, 13, 17, 9);
+  g.fillStyle = '#171c27'; g.fillRect(0, 34, W, 66); g.fillStyle = '#9aa3b5'; g.font = '300 34px Inter, sans-serif'; g.fillText('‹', 12, 66);
+  const av = '#' + new THREE.Color(avatar).getHexString(); g.fillStyle = av; g.beginPath(); g.arc(56, 67, 20, 0, 6.29); g.fill(); g.fillStyle = '#fff'; g.font = '700 19px Inter, sans-serif'; g.textAlign = 'center'; g.fillText(name[0], 56, 68); g.textAlign = 'left';
+  g.fillStyle = '#f2f4f8'; g.font = '700 21px Inter, sans-serif'; g.fillText(name, 86, 58); g.fillStyle = status === 'online' ? '#5fd38a' : '#8a93a6'; g.font = '500 14px Inter, sans-serif'; g.fillText(status, 86, 81);
+  g.fillStyle = '#232a38'; rr(W / 2 - 34, 116, 68, 24, 12); g.fill(); g.fillStyle = '#aab3c5'; g.font = '600 13px Inter, sans-serif'; g.textAlign = 'center'; g.fillText('Heute', W / 2, 128); g.textAlign = 'left';
+  let y = 158; const maxW = 230;
+  for (const m of msgs) { g.font = '600 27px Inter, sans-serif'; const tw = Math.min(maxW, g.measureText(m.text).width); const bw = tw + 30 + 58, bh = 50; const x = m.me ? W - 14 - bw : 14;
+    g.fillStyle = m.me ? '#1f8a5f' : '#2a3140'; rr(x, y, bw, bh, 18); g.fill();
+    g.fillStyle = '#ffffff'; g.fillText(m.text, x + 15, y + bh / 2 + 1, maxW);
+    g.fillStyle = m.me ? 'rgba(255,255,255,0.75)' : '#9aa3b5'; g.font = '500 12px Inter, sans-serif'; g.fillText(m.time || '', x + bw - (m.me ? 56 : 44), y + bh - 13);
+    if (m.me) { g.strokeStyle = seen ? '#6cc8ff' : 'rgba(255,255,255,0.75)'; g.lineWidth = 1.8; g.lineCap = 'round'; for (const dx of [0, 5]) { g.beginPath(); g.moveTo(x + bw - 22 + dx, y + bh - 13); g.lineTo(x + bw - 18 + dx, y + bh - 9); g.lineTo(x + bw - 11 + dx, y + bh - 18); g.stroke(); } }
+    y += bh + 12; }
+  if (seen) { g.fillStyle = '#8f98ab'; g.font = '600 16px Inter, sans-serif'; g.textAlign = 'right'; g.fillText(seen, W - 18, y + 6); g.textAlign = 'left'; y += 30; }
+  if (typing) { g.fillStyle = '#2a3140'; rr(14, y, 74, 40, 18); g.fill(); g.fillStyle = '#c3cad8'; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(35 + i * 16, y + 20, 4.5, 0, 6.29); g.fill(); } }
+  g.fillStyle = '#171c27'; g.fillRect(0, H - 70, W, 70); g.fillStyle = '#232a38'; rr(14, H - 56, W - 78, 42, 21); g.fill(); g.fillStyle = '#7d869a'; g.font = '500 16px Inter, sans-serif'; g.fillText('Nachricht', 30, H - 35);
+  g.fillStyle = '#1f8a5f'; g.beginPath(); g.arc(W - 36, H - 35, 21, 0, 6.29); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(W - 44, H - 44); g.lineTo(W - 26, H - 35); g.lineTo(W - 44, H - 26); g.closePath(); g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
 // Bildschirm-Inhalt: Story von Leon (Party heute), für Handy-Szenen
 export function partyStoryTex() {
