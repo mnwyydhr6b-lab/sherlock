@@ -109,7 +109,7 @@ export function spawnBlock(name, o = {}) {
   const female = CAST[name] && CAST[name].sex === 'female';
   const mSkin = toy(spec.skin, { roughness: 0.55, clearcoat: 0.15 }), mTop = toy(spec.shirt), mTop2 = toy(shade(spec.shirt, 0.82)), mPants = toy(spec.pants, { roughness: 0.7, clearcoat: 0.1 }), mShoe = toy(spec.shoes), mSole = toy(0xdedede), mHair = toy(spec.hair, { roughness: 0.6 }), mHair2 = toy(shade(spec.hair, 0.82), { roughness: 0.6 });
   // Kopf: großer weicher Würfel, Gesicht als Folie vorne
-  const head = P('Head'), HS = female ? 0.27 : 0.285; const hc = head.clone().add(new THREE.Vector3(0, HS * 0.5 + 0.02, 0.025));
+  const head = P('Head'), HS = female ? 0.27 : 0.285, NECK = o.neck ?? 0.05; const hc = head.clone().add(new THREE.Vector3(0, HS * 0.5 + 0.02 + NECK, 0.025)); // Kopf sitzt auf einem sichtbaren Hals (seit 24.11.)
   const headM = put('Head', rbox(HS, HS, HS * 0.94, HS * 0.14, 4), mSkin, hc);
   const faceMat = new THREE.MeshStandardMaterial({ map: drawFace(spec, 'neutral'), transparent: true, roughness: 0.6, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
   const face = put('Head', new THREE.PlaneGeometry(HS * 0.9, HS * 0.9), faceMat, hc.clone().add(new THREE.Vector3(0, 0, HS * 0.47 + 0.0015)), { cast: false });
@@ -130,6 +130,8 @@ export function spawnBlock(name, o = {}) {
   const tTop = nk.y + 0.01, tBot = pel.y + 0.02; const tc = new THREE.Vector3(0, (tTop + tBot) / 2, (sp1.z + nk.z) / 2 + 0.01);
   put('spine_02', rbox(TW, tTop - tBot, TD, 0.05, 3), mTop, tc);
   put('pelvis', rbox(TW * 0.94, 0.17, TD * 0.96, 0.045, 3), mPants, new THREE.Vector3(0, pel.y - 0.04, tc.z));
+  // Hals: Haut-Block vom Oberteil bis unter den Kopf (hängt am Halsknochen, biegt mit)
+  { const nb = hc.y - HS / 2 + 0.03, nt = tTop - 0.03; const nw = female ? 0.105 : 0.12; put('neck_01', rbox(nw, nb - nt, nw * 0.92, 0.03, 3), mSkin, new THREE.Vector3(0, (nb + nt) / 2, hc.z - 0.035)); }
   // Oberteil-Details
   const fz = tc.z + TD / 2;
   if (spec.top === 'hoodie') { put('spine_03', rbox(TW * 0.82, 0.1, 0.14, 0.045, 3), mTop2, new THREE.Vector3(0, tTop - 0.01, tc.z - TD * 0.42)); // Kapuze

@@ -44,12 +44,12 @@ add(A + 'door_close.mp3', CLOSE - 0.35, '', 0.85)
 add(A + 'laugh_muffled.mp3', 43.3, 'lowpass=f=1800', 0.55, 0.3, 1.2, dur=5.5)
 add(A + 'drone.mp3', 44.8, '', 0.55, 1.2, 1.0, dur=5.2)
 # ---- Stimmen (Startzeiten wie VOICE in folge01.html)
-for n, t, v in [('f01_du_abchecken', 5.4, 1.2), ('f01_du_hey', 10.49, 1.15), ('f01_du_party', 21.4, 1.15), ('f01_jasmin_danke', 23.3, 1.2),
-                ('f01_du_anstossen', 25.55, 1.15), ('f01_mia_passt', 27.0, 1.2), ('f01_leon_kreis', 37.7, 1.2)]:
+for n, t, v in [('f01_du_hook', 0.15, 1.2), ('f01_du_abchecken', 6.2, 1.2), ('f01_du_hey', 10.45, 1.15), ('f01_du_party', 21.3, 1.15), ('f01_jasmin_danke', 23.15, 1.2),
+                ('f01_du_anstossen', 25.6, 1.15), ('f01_mia_passt', 26.75, 1.2), ('f01_leon_kreis', 37.6, 1.2)]:
     add(A + n + '.mp3', t, '', v)
-add(A + 'whisper.mp3', 35.4, 'pan=stereo|c0=1.0*c0|c1=0.4*c1', 1.3)
+add(A + 'f01_whisper.mp3', 35.3, 'pan=stereo|c0=1.0*c0|c1=0.4*c1', 1.3)
 # ---- Zähler-Abfälle: dumpfer Schlag
-for ht in [11.5, 24.2, 28.4, 31.4, 37.0, 43.0]: add(A + 'hit.mp3', ht, '', 0.7)
+for ht in [11.5, 24.2, 28.6, 31.4, 37.0, 43.0]: add(A + 'hit.mp3', ht, '', 0.7)
 n = len(chains)
 fc = ';'.join(chains) + ';' + ''.join(f'[a{i}]' for i in range(n)) + f'amix=inputs={n}:normalize=0:dropout_transition=0,alimiter=limit=0.9,apad,atrim=0:{L},loudnorm=I=-16:TP=-1.5:LRA=11[out]'
 subprocess.run(['ffmpeg', '-v', 'error', '-y'] + inputs + ['-filter_complex', fc, '-map', '[out]', '-ar', '44100', '-c:a', 'pcm_s16le', OUT], check=True)

@@ -28,14 +28,14 @@ const Q = new URLSearchParams(location.search); const part = Q.get('part') || 's
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 // ---------------------------------------------------------------- gemeinsame Zeitleiste
 export const T = { arriveGate: 4.2, goIn: 8.4, cutIn: 13.9, cutOut: 41.5, close0: 41.95, close1: 42.75, end: 45.0, len: 50.0 };
-const COUNTER = [[0, 100], [11.5, 85], [24.2, 72], [28.4, 55], [31.4, 38], [37.0, 19], [43.0, 5]];
+const COUNTER = [[0, 100], [11.5, 85], [24.2, 72], [28.6, 55], [31.4, 38], [37.0, 19], [43.0, 5]];
 const SUBS = [
-  [3.15, 5.0, 'Vielleicht haben sie’s vergessen.'], [6.1, 8.4, '„Ach, ich geh mal kurz abchecken.“'], [0, 0, '„Hey, na?“'],
-  [16.0, 18.5, 'Erst merkt es keiner.'], [21.5, 23.0, '„Geile Party!“'], [23.35, 24.5, '„… Danke.“'], [25.7, 26.7, '„Anstoßen?“'], [27.05, 28.4, '„Ne, passt schon.“'],
-  [30.4, 32.8, 'Dann merkt es jeder.'], [35.5, 37.4, '„Wer hat den eingeladen?“'], [37.8, 41.45, '„Ey … ist heute eher so ’n kleiner Kreis.“'], [42.9, 45.2, 'Die Party ging weiter. Nur ohne dich.'],
+  [0.2, 1.7, '„Eine Party?“'], [2.05, 3.7, '„Ohne mich?“'], [4.5, 6.1, '„Vielleicht haben sie’s vergessen.“'], [6.35, 8.6, '„Ach, ich geh mal kurz abchecken.“'], [0, 0, '„Hey, na?“'],
+  [16.0, 18.5, 'Erst merkt es keiner.'], [21.5, 23.0, '„Geile Party!“'], [23.35, 24.5, '„… Danke.“'], [25.7, 26.7, '„Anstoßen?“'], [27.05, 28.6, '„Ne … passt schon.“'],
+  [30.4, 32.8, 'Dann merkt es jeder.'], [35.5, 37.4, '„Wer hat den eingeladen?“'], [37.85, 41.1, '„Ey … ist heute eher so ’n kleiner Kreis.“'], [42.9, 45.2, 'Die Party ging weiter. Nur ohne dich.'],
 ];
-const VOICE = { abchecken: 5.4, hey: 0, party: 21.4, danke: 23.3, anstossen: 25.55, passt: 27.0, whisper: 35.4, kreis: 37.7 };
-const ENV = {}; async function loadEnv() { const f = { abchecken: 'f01_du_abchecken', hey: 'f01_du_hey', party: 'f01_du_party', danke: 'f01_jasmin_danke', anstossen: 'f01_du_anstossen', passt: 'f01_mia_passt', whisper: 'whisper', kreis: 'f01_leon_kreis' };
+const VOICE = { hook: 0.15, abchecken: 6.2, hey: 0, party: 21.3, danke: 23.15, anstossen: 25.6, passt: 26.75, whisper: 35.3, kreis: 37.6 }; // = Startzeiten der Tondateien (mix_f01.py)
+const ENV = {}; async function loadEnv() { const f = { hook: 'f01_du_hook', abchecken: 'f01_du_abchecken', hey: 'f01_du_hey', party: 'f01_du_party', danke: 'f01_jasmin_danke', anstossen: 'f01_du_anstossen', passt: 'f01_mia_passt', whisper: 'f01_whisper', kreis: 'f01_leon_kreis' };
   for (const [k, n] of Object.entries(f)) ENV[k] = await (await fetch(`audio/${n}.env.json`)).json(); }
 const lip = (t, k) => lipAt(t, ENV[k], VOICE[k], 0.85);
 // Blickziele der Ego-Kamera: [{ t, d, p: () => Punkt | pitch | null (geradeaus) }]
@@ -68,7 +68,7 @@ async function main() {
     rf(t);
     const c = counterAt(t, COUNTER); hud.counter(c.v, c.fl); hud.hud(1);
     stage.grade.uniforms.sat.value = 0.32 + (P.sat - 0.32) * Math.max(0, (c.v - 5) / 95); // Welt verliert mit dem Zähler Farbe
-    let so = 0, txt = ''; for (const [a, b, s] of SUBS) { const k = Math.min(smooth((t - a) / 0.2), 1 - smooth((t - b + 0.2) / 0.2)); if (k > so) { so = k; txt = s; } } hud.sub(txt, so);
+    let so = 0, txt = ''; for (const [a, b, s] of SUBS) { const k = Math.min(smooth((t - a) / 0.2), 1 - smooth((t - b + 0.2) / 0.2)); if (k > so) { so = k; txt = s; } } hud.subTop(t < 3.75 ? 600 : 1238); hud.sub(txt, so);
     hud.endCard(t - T.end, { nr: 1, rule: 'Wenn du nicht eingeladen bist, geh nicht hin.', question: 'Wärst du trotzdem hingegangen?' });
     stage.render();
   };
@@ -88,7 +88,7 @@ async function buildStreet() {
   const curve = new THREE.QuadraticBezierCurve3(V3(6.4, 0, 3.0), V3(9.2, 0, 2.6), V3(10.65, 0, 0.45)); const cp = []; for (let i = 1; i <= 8; i++) { const p = curve.getPoint(i / 8); cp.push([p.x, p.z]); }
   const r2 = route([[5.0, 2.25], [5.55, 2.85], [6.4, 3.0], ...cp, [11.0, 0.42], [11.9, 0.4], [12.55, 0.4], [13.35, 0.4]], T.goIn, 1.15);
   const tAt = (x) => { for (let i = 1; i < r2.length; i++) if (r2[i][1] >= x) { const [t0, x0] = r2[i - 1], [t1, x1] = r2[i]; return t0 + (t1 - t0) * (x - x0) / (x1 - x0); } return r2[r2.length - 1][0]; };
-  const tGreet = tAt(7.2); SUBS[2][0] = tGreet + 0.05; SUBS[2][1] = tGreet + 1.0; VOICE.hey = tGreet - 0.08;
+  const tGreet = tAt(7.2); SUBS[4][0] = tGreet + 0.05; SUBS[4][1] = tGreet + 1.0; VOICE.hey = tGreet - 0.12;
   console.log('cut at x=10.9:', tAt(10.9).toFixed(2), 'walk speed', v.toFixed(3), 'greet', tGreet.toFixed(2), 'door', tAt(12.55).toFixed(2), 'hall', r2[r2.length - 1][0].toFixed(2));
   const ryKeys = [[0, 0], [T.arriveGate - 0.1, 0], [T.arriveGate + 0.8, Math.PI / 2]]; for (let i = 1; i < r2.length; i++) ryKeys.push([r2[i - 1][0] + 0.05, angTo([r2[i - 1][1], r2[i - 1][2]], [r2[i][1], r2[i][2]])]);
   ryKeys.push([T.cutOut - 0.6, Math.PI / 2]);
@@ -130,7 +130,7 @@ async function buildStreet() {
     // Ego-Kamera
     const walking = (t < T.arriveGate) || (t > T.goIn && t < T.cutIn);
     const st = povPose(du, { steady: true, pitch: -0.06, bob: walking ? 0.012 : 0, t });
-    const kPh = t < 2.6 ? 1 : 1 - smooth((t - 2.6) / 0.55); phone.set(kPh); // Hook: Leons Story auf dem Handy, dann runter -> Partyhaus
+    const kPh = t < 3.2 ? 1 : 1 - smooth((t - 3.2) / 0.55); phone.set(kPh); // Hook: Leons Story auf dem Handy, dann runter -> Partyhaus
     const kW = smooth((t - tGreet + 0.35) / 0.35) * (1 - smooth((t - tGreet - 1.1) / 0.4)); hand.set(kW, { wave: t });
     let dir = lookDir(t, st, look); dir.y -= 0.12 * kPh; dir.normalize();
     const cam = stage.camera; cam.position.copy(st.eye); cam.lookAt(st.eye.clone().add(dir)); cam.fov = 60; cam.near = 0.03; cam.updateProjectionMatrix();
@@ -160,7 +160,7 @@ async function buildRoom() {
   const jA = new Actor(jas, { segs: [{ anim: 'Ara:Talk with gestures', at: 0, offset: 1.0 }, { anim: 'Idle_Loop', at: 21.3, fade: 0.5 }, { anim: 'Idle_Talking_Loop', at: 24.6, fade: 0.5, offset: 0.6 }, { anim: 'Idle_Loop', at: 33.5, fade: 0.5 }],
     ry: [[0, ryJ], [21.5, ryJ], [22.1, ryJ + 0.75 * ((toDuJ - ryJ + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [23.9, ryJ + 0.75 * ((toDuJ - ryJ + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [24.5, ryJ]] });
   const mA = new Actor(mia, { segs: [{ anim: 'Ara:Laugh', at: 0, offset: 0.3 }, { anim: 'Idle_Loop', at: 20.0, fade: 0.6 }],
-    ry: [[0, ryM], [25.5, ryM], [26.1, ryM + 0.8 * ((toDuM - ryM + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [28.0, ryM + 0.8 * ((toDuM - ryM + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [28.6, ryM]] });
+    ry: [[0, ryM], [25.5, ryM], [26.1, ryM + 0.8 * ((toDuM - ryM + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [28.4, ryM + 0.8 * ((toDuM - ryM + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [29.0, ryM]] });
   // Tanzfläche: Kreis um WANCHOR.dance, Lücke nach Süden – als Du kommt, macht die Gruppe zu und dreht ihm den Rücken zu
   const dc = WANCHOR.dance;
   const dancers = [spawnBlock('ben', { x: 0.35, y: 0, z: -0.95 }), extra('tealGirl', { x: 0.95, y: 0, z: -1.85 }), extra('beigeGuy', { x: 1.55, y: 0, z: -1.05 }), extra('limeGirl', { x: 0.25, y: 0, z: -1.65 })];
@@ -201,7 +201,7 @@ async function buildRoom() {
     if (kJ > 0) lookAt(jas, duH, 0.9 * kJ); else if (kW > 0) lookAt(jas, miaF(), 0.8 * kW);
     jas.userData.blockFace.set(kW > 0.3 ? (t > 36.4 ? 'sideeye' : 'smirk') : kJ > 0.2 ? 'neutral' : t > 24.5 ? 'laugh' : 'happy', { blink: blinkAt(t, 4), talk: kJ > 0.2 ? lip(t, 'danke') : kW > 0.3 ? lip(t, 'whisper') * 0.5 : t < 21.3 || (t > 24.6 && t < 33.5) ? Math.max(0, Math.sin(t * 8.1)) * 0.6 : 0, look: kW > 0.3 && t > 36.3 ? [0.6, 0] : null });
     // Mia: „Anstoßen?“ -> „Ne, passt schon.“, dreht sich weg; beim Flüstern schaut sie zu Du
-    const kM = smooth((t - 25.8) / 0.4) * (1 - smooth((t - 28.0) / 0.5)), kM2 = smooth((t - 36.0) / 0.4) * (1 - smooth((t - 37.7) / 0.5));
+    const kM = smooth((t - 25.8) / 0.4) * (1 - smooth((t - 28.4) / 0.5)), kM2 = smooth((t - 36.0) / 0.4) * (1 - smooth((t - 37.7) / 0.5));
     if (kM > 0) lookAt(mia, duH, 0.9 * kM); else if (kM2 > 0) lookAt(mia, duH, 0.7 * kM2);
     mia.userData.blockFace.set(kM > 0.2 ? 'sideeye' : kM2 > 0.2 ? 'sideeye' : t < 20.2 ? 'laugh' : 'happy', { blink: blinkAt(t, 5), talk: kM > 0.2 ? lip(t, 'passt') : 0 });
     // Tanzgruppe: nach dem Zumachen Becken exakt zur Kreismitte drehen (manche Clips drehen die Hüfte mit) -> Rücken zu Du

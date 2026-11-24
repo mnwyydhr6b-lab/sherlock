@@ -220,6 +220,8 @@
 - Will eigene Figuren und Details – „die Details machen es aus“.
 - Will auf Deutsch kurz und klar informiert werden.
 - Antwortet manchmal nicht auf Auswahl-Dialoge; dann einfache Textoptionen anbieten.
+- **Figuren mit Hals, Stimmen mit Gefühl (Nutzer 24.11.):** Die Klötzchen-Figuren haben jetzt einen sichtbaren Hals. Stimmen immer emotional erzeugen: eleven_v3 mit Audio-Tags (z. B. `[hurt]`, `[annoyed, dismissive]`) und `voice_settings.stability = 0.0`.
+- **Hook muss die Situation sofort erklären (Nutzer 24.11.):** Du spricht im Hook aus, worum es geht (Folge 1: „Eine Party? Ohne mich? Vielleicht haben sie’s vergessen.“). Solange das Handy unten im Bild ist, Untertitel höher setzen (`hud.subTop(600)`).
 - **Nicht auf Antworten warten (Nutzer 23.11.):** Testbilder dürfen geschickt werden, aber Claude wartet nicht auf Feedback, sondern prüft selbst und arbeitet direkt weiter bis zum fertigen Video. Nur bei echten Entscheidungen fragen.
 - **Fehler im Bild stören ihn sehr** (fehlende Hand, Handy durch die Hand, Loch am Hals). Vor jedem Zeigen Testbilder selbst genau prüfen, besonders Hände, Hals, Handy und Kopf.
 - Will auffallen, aber **ohne Spielereien**: Klötzchen-Figuren in der detaillierten Welt, Ego-Perspektive, normales Format. Vorgeschlagene Effekte (Risse, abfallende Blöcke, Glas-Sprünge) hat er abgelehnt.

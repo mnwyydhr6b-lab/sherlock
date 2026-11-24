@@ -32,6 +32,8 @@ export async function createHUD(parent = document.getElementById('wrap')) {
     loc(text) { hud.querySelector('.loc').textContent = text; },
     // Zähler: Wert in %, flash 0..1 (rot aufblinken bei einem Abfall)
     counter(v, fl = 0) { const n = hud.querySelector('.num'); n.textContent = Math.round(v) + ' %'; n.style.color = fl > 0.05 ? `rgb(255,${255 - 190 * fl | 0},${255 - 190 * fl | 0})` : '#fff'; n.style.transform = `scale(${1 + 0.12 * fl})`; flash.style.opacity = fl * 0.8; },
+    // Untertitel-Höhe (Pixel von oben, Standard 1238) – z. B. höher setzen, solange das Handy unten im Bild ist
+    subTop(px = 1238) { sub.style.top = px + 'px'; band.style.top = (px - 38) + 'px'; },
     sub(text, op = 1) { sub.textContent = text; sub.style.opacity = op; band.style.opacity = op * 0.9; },
     dark(op) { dark.style.opacity = op; },
     // Einheitliche Endkarte. lt = Sekunden seit Beginn der Endkarte (< 0: unsichtbar). Dauer ca. 5 s.

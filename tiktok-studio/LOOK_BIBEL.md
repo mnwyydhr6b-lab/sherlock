@@ -53,6 +53,7 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 - Nur `spawnBlock('du' | 'mia' | 'leon' | 'jasmin' | 'tarik' | 'ben' | 'mama' | 'papa', { x, y, z, ry, anim, time })` verwenden. Aussehen steht in `BLOCK_CAST`.
 - Farben, Frisuren und Kleidung der festen Figuren **nie** ändern.
 - Statisten: `spawnBlock('ben', { spec: { … } })` für Männer bzw. `spawnBlock('mia', { spec: { … } })` für Frauen (der Name bestimmt nur Skelett und Statur), mit eigenen Farben: `spec: { shirt: 0x…, pants: 0x…, hair: 0x…, hairStyle: 'short'|'buzz'|'long'|'bun', top: 'hoodie'|'jacket'|'shirt'|'tee', skin: 0x… }`. Immer andere Farben als die feste Besetzung.
+- **Hals (Nutzer-Wunsch 24.11.):** Der Kopf sitzt auf einem sichtbaren Hals in Hautfarbe (`NECK` = 0,05 m in `spawnBlock`, abschaltbar mit `{ neck: 0 }`). Referenzbilder in `look/` von vor dem 24.11. zeigen die Figuren noch ohne Hals.
 - Aufbau: Jeder Block hängt starr an einem Knochen des Skeletts. Es gibt keine Finger, keine Haut und keine Kleidungshülle. Deshalb kann nichts durchstechen oder verschwinden.
 - Die Figuren nutzen das Skelett der alten Figuren, darum laufen alle 86 Skelett-Animationen (z. B. `Idle_Loop`, `Walk_Loop`, `Dance_Loop`, `Sitting_Idle_Loop`) und alle Posen-Helfer aus `kit_cast.js` (`sitOn`, `faceTo`, `lookAt`, `holdCup`, `posePhone`).
 
