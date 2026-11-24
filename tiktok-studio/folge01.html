@@ -1,0 +1,232 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1920px;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Folge 1 – „Wenn du nicht eingeladen bist, geh nicht hin.“ (50 s, Ego-Perspektive)
+// Zwei Drehorte, eine gemeinsame Zeitleiste t (Sekunden):
+//   ?part=street : Lindenweg 0–16,3 s (Hook, Tor, Vorgarten, Haustür) und 41,5–50 s (Tür fällt zu, Endkarte)
+//   ?part=room   : Party-Wohnzimmer 16,3–41,5 s
+// Rendern: node render.js "folge01.html?part=street" ordner 16.333 24 0   usw. (siehe make_folge01.sh)
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { buildStrasse, SW } from './set_strasse.js';
+import { buildWohnzimmer, WANCHOR } from './set_wohnzimmer.js';
+import { loadHumanAssets, holdCup, faceTo, lookAt, sitOn } from './kit_cast.js';
+import { spawnBlock, loadBlockMoves, prepMoves, syncPhone, povHide, povPose, povPhoneRig, povHandRig, partyStoryTex } from './kit_block.js';
+import { Actor, clipSpeed, smooth, blinkAt, lipAt } from './kit_anim.js';
+import { createHUD, counterAt } from './kit_hud.js';
+
+const Q = new URLSearchParams(location.search); const part = Q.get('part') || 'street';
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+// ---------------------------------------------------------------- gemeinsame Zeitleiste
+export const T = { arriveGate: 4.2, goIn: 8.4, cutIn: 13.9, cutOut: 41.5, close0: 41.95, close1: 42.75, end: 45.0, len: 50.0 };
+const COUNTER = [[0, 100], [11.5, 85], [24.2, 72], [28.4, 55], [31.4, 38], [37.0, 19], [43.0, 5]];
+const SUBS = [
+  [3.15, 5.0, 'Vielleicht haben sie’s vergessen.'], [6.1, 8.4, '„Ach, ich geh mal kurz abchecken.“'], [0, 0, '„Hey, na?“'],
+  [16.0, 18.5, 'Erst merkt es keiner.'], [21.5, 23.0, '„Geile Party!“'], [23.35, 24.5, '„… Danke.“'], [25.7, 26.7, '„Anstoßen?“'], [27.05, 28.4, '„Ne, passt schon.“'],
+  [30.4, 32.8, 'Dann merkt es jeder.'], [35.5, 37.4, '„Wer hat den eingeladen?“'], [37.8, 41.45, '„Ey … ist heute eher so ’n kleiner Kreis.“'], [42.9, 45.2, 'Die Party ging weiter. Nur ohne dich.'],
+];
+const VOICE = { abchecken: 5.4, hey: 0, party: 21.4, danke: 23.3, anstossen: 25.55, passt: 27.0, whisper: 35.4, kreis: 37.7 };
+const ENV = {}; async function loadEnv() { const f = { abchecken: 'f01_du_abchecken', hey: 'f01_du_hey', party: 'f01_du_party', danke: 'f01_jasmin_danke', anstossen: 'f01_du_anstossen', passt: 'f01_mia_passt', whisper: 'whisper', kreis: 'f01_leon_kreis' };
+  for (const [k, n] of Object.entries(f)) ENV[k] = await (await fetch(`audio/${n}.env.json`)).json(); }
+const lip = (t, k) => lipAt(t, ENV[k], VOICE[k], 0.85);
+// Blickziele der Ego-Kamera: [{ t, d, p: () => Punkt | pitch | null (geradeaus) }]
+function lookDir(t, st, segs) { const dirOf = (s) => s.p ? s.p().clone().sub(st.eye).normalize() : s.pitch != null ? V3(st.dir.x, 0, st.dir.z).normalize().setY(Math.sin(s.pitch)).normalize() : st.dir.clone();
+  let i = 0; for (let k = 0; k < segs.length; k++) if (segs[k].t <= t) i = k; const cur = segs[i], prev = segs[i - 1]; if (!prev || t < cur.t) return dirOf(cur);
+  return dirOf(prev).lerp(dirOf(cur), smooth((t - cur.t) / (cur.d ?? 0.7))).normalize(); }
+// Laufweg mit konstanter Geschwindigkeit -> path-Keys + Ankunftszeit
+function route(pts, t0, speed) { const keys = [[t0, pts[0][0], pts[0][1]]]; let t = t0; for (let i = 1; i < pts.length; i++) { t += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) / speed; keys.push([t, pts[i][0], pts[i][1]]); } return keys; }
+const headOf = (h, up = 0.16) => () => { h.updateMatrixWorld(true); return h.userData.bones.Head.getWorldPosition(new THREE.Vector3()).add(V3(0, up, 0)); };
+const angTo = (a, b) => Math.atan2(b[0] - a[0], b[1] - a[1]);
+const EXTRA = { // Statisten (andere Farben als die feste Besetzung)
+  tealGirl: ['mia', { shirt: 0x3ac0b0, pants: 0x2b2b33, hair: 0x2a1a12, hairStyle: 'bun', top: 'tee', skin: 0xe8b890 }],
+  beigeGuy: ['ben', { shirt: 0xe8e0d0, pants: 0x5a4a3a, hair: 0xc8a060, hairStyle: 'short', top: 'shirt', skin: 0xf0c8a8 }],
+  purpleGuy: ['ben', { shirt: 0x6a4ab8, pants: 0x2b2b33, hair: 0x1a1a1a, hairStyle: 'buzz', top: 'hoodie', skin: 0xb98a62 }],
+  orangeGirl: ['mia', { shirt: 0xf08a3a, pants: 0x4a6fae, hair: 0xe8c890, hairStyle: 'long', top: 'jacket', shirt2: 0xffffff, skin: 0xf3cfb0 }],
+  limeGirl: ['mia', { shirt: 0xa8d84a, pants: 0x2b2b33, hair: 0x6a3a1a, hairStyle: 'long', top: 'tee', skin: 0xd8a07a }],
+  greyGuy: ['ben', { shirt: 0x8a8f98, pants: 0x24345a, hair: 0x3a2a1a, hairStyle: 'short', top: 'hoodie', skin: 0xf2c9a6 }],
+  navyGuy: ['ben', { shirt: 0x2a3a6a, pants: 0x5a5a5a, hair: 0xd8b064, hairStyle: 'buzz', top: 'jacket', shirt2: 0xd8d8d8, skin: 0xf0c4a0 }],
+};
+const extra = (k, o = {}) => spawnBlock(EXTRA[k][0], { ...o, spec: EXTRA[k][1] });
+
+const stage = createStage({ preset: part === 'room' ? 'innen_nacht' : 'nacht' });
+const { scene } = stage;
+async function main() {
+  await loadEnv();
+  const hud = await createHUD();
+  const rf = part === 'room' ? await buildRoom() : await buildStreet();
+  const P = stage.P;
+  window.renderFrame = (t) => {
+    rf(t);
+    const c = counterAt(t, COUNTER); hud.counter(c.v, c.fl); hud.hud(1);
+    stage.grade.uniforms.sat.value = 0.32 + (P.sat - 0.32) * Math.max(0, (c.v - 5) / 95); // Welt verliert mit dem Zähler Farbe
+    let so = 0, txt = ''; for (const [a, b, s] of SUBS) { const k = Math.min(smooth((t - a) / 0.2), 1 - smooth((t - b + 0.2) / 0.2)); if (k > so) { so = k; txt = s; } } hud.sub(txt, so);
+    hud.endCard(t - T.end, { nr: 1, rule: 'Wenn du nicht eingeladen bist, geh nicht hin.', question: 'Wärst du trotzdem hingegangen?' });
+    stage.render();
+  };
+  window.renderStill = () => { window.renderFrame(parseFloat(Q.get('t') || (part === 'room' ? '22' : '3'))); return true; };
+  window.clipLength = T.len; window.ready = true;
+}
+
+// ================================================================ Straße (A: 0–16,3 s, C: 41,5–50 s)
+async function buildStreet() {
+  const S = await buildStrasse(stage, { party: true, silhouettes: [] });
+  await loadHumanAssets(); await loadBlockMoves();
+  const du = spawnBlock('du', { anim: 'Walk_Loop', x: 5.0, y: SW, z: -2.4 }); scene.add(du); povHide(du);
+  const phone = povPhoneRig(stage, du, { screen: partyStoryTex() }), hand = povHandRig(stage, du, {});
+  const v = clipSpeed(du, 'Walk_Loop');
+  // Weg 1: Gehweg bis vors Tor. Weg 2: durchs Tor, Gartenweg (Kurve), Stufen, Haustür, Flur.
+  const r1 = route([[5.0, 2.25 - 1.3 * T.arriveGate], [5.0, 2.25]], 0, 1.3);
+  const curve = new THREE.QuadraticBezierCurve3(V3(6.4, 0, 3.0), V3(9.2, 0, 2.6), V3(10.65, 0, 0.45)); const cp = []; for (let i = 1; i <= 8; i++) { const p = curve.getPoint(i / 8); cp.push([p.x, p.z]); }
+  const r2 = route([[5.0, 2.25], [5.55, 2.85], [6.4, 3.0], ...cp, [11.0, 0.42], [11.9, 0.4], [12.55, 0.4], [13.35, 0.4]], T.goIn, 1.15);
+  const tAt = (x) => { for (let i = 1; i < r2.length; i++) if (r2[i][1] >= x) { const [t0, x0] = r2[i - 1], [t1, x1] = r2[i]; return t0 + (t1 - t0) * (x - x0) / (x1 - x0); } return r2[r2.length - 1][0]; };
+  const tGreet = tAt(7.2); SUBS[2][0] = tGreet + 0.05; SUBS[2][1] = tGreet + 1.0; VOICE.hey = tGreet - 0.08;
+  console.log('cut at x=10.9:', tAt(10.9).toFixed(2), 'walk speed', v.toFixed(3), 'greet', tGreet.toFixed(2), 'door', tAt(12.55).toFixed(2), 'hall', r2[r2.length - 1][0].toFixed(2));
+  const ryKeys = [[0, 0], [T.arriveGate - 0.1, 0], [T.arriveGate + 0.8, Math.PI / 2]]; for (let i = 1; i < r2.length; i++) ryKeys.push([r2[i - 1][0] + 0.05, angTo([r2[i - 1][1], r2[i - 1][2]], [r2[i][1], r2[i][2]])]);
+  ryKeys.push([T.cutOut - 0.6, Math.PI / 2]);
+  const duA = new Actor(du, { segs: [{ anim: 'Walk_Loop', at: 0, speed: 1.3 / v }, { anim: 'Idle_Loop', at: T.arriveGate - 0.15, fade: 0.5 }, { anim: 'Walk_Loop', at: T.goIn - 0.1, speed: 1.15 / v, fade: 0.4 }, { anim: 'Idle_Loop', at: T.cutOut - 1, fade: 0.01 }],
+    path: [...r1, ...r2, [T.cutOut - 0.51, 13.35, 0.4], [T.cutOut - 0.5, 11.55, 0.4], [43.0, 11.55, 0.4], [44.6, 10.8, 0.4]], ry: ryKeys,
+    after: (t, h) => { h.position.y = SW + 0.45 * smooth((h.position.x - 10.72) / 0.68); h.updateMatrixWorld(true); } });
+  // Leute im Vorgarten: reden und lachen, bis Du grüßt – dann schauen sie ihn nur komisch an
+  const gc = [7.9, 0.05];
+  const yard = [spawnBlock('tarik', { x: 7.5, y: SW, z: 0.45 }), extra('tealGirl', { x: 8.4, y: SW, z: 0.25 }), extra('greyGuy', { x: 7.8, y: SW, z: -0.45 })];
+  yard.forEach(h => { scene.add(h); faceTo(h, V3(gc[0], 0, gc[1])); }); prepMoves(yard[1], ['Laugh']); holdCup(yard[0], 'r'); holdCup(yard[2], 'l');
+  const yA = [new Actor(yard[0], { segs: [{ anim: 'Idle_Talking_Loop', at: 0, offset: 1.0 }, { anim: 'Idle_FoldArms_Loop', at: tGreet + 0.5, fade: 0.6 }] }),
+    new Actor(yard[1], { segs: [{ anim: 'Ara:Laugh', at: 0, offset: 0.5 }, { anim: 'Idle_Loop', at: tGreet + 0.3, fade: 0.5 }] }),
+    new Actor(yard[2], { segs: [{ anim: 'Idle_Loop', at: 0, offset: 0.3 }] })];
+  const yardRy = yard.map(h => h.rotation.y);
+  // Leon an der Tür (nur im Schluss: macht die Tür zu)
+  const leon = spawnBlock('leon', { anim: 'Idle_Loop', x: 13.3, y: SW + 0.45, z: 0.45, ry: -Math.PI / 2 }); scene.add(leon);
+  const lA = new Actor(leon, { segs: [{ anim: 'Idle_Loop', at: 0, offset: 0.4 }] });
+  const hallL = new THREE.PointLight(0xffb0d8, 1.6, 4, 1.8); hallL.position.set(13.7, SW + 2.3, 0.4); scene.add(hallL);
+  const leaf = S.partyHouse.userData.doorLeaf, open0 = leaf.rotation.y;
+  const hud = null;
+  const seg = Q.get('seg') || (parseFloat(Q.get('t') || '0') >= 41 ? 'c' : 'a');
+  stage.build({ focus: V3(8, 1.5, 1.5) }); stage.limitLights(seg === 'c' ? V3(11.8, 1.5, 0.4) : V3(7.5, 1.5, 1.5), 9);
+  // Blickziele (Ego-Kamera)
+  const yardHead = () => V3(7.95, SW + 1.4, 0.1), doorP = () => V3(12.5, SW + 1.5, 0.4), leonFace = headOf(leon, 0.15);
+  const look = [{ t: 0 }, { t: T.arriveGate + 0.7, d: 0.8, p: () => V3(11.5, SW + 1.7, 2.3) }, { t: 5.6, d: 0.7, pitch: -0.32 }, { t: 7.0, d: 0.8, p: () => V3(11.5, SW + 1.6, 1.2) }, { t: T.goIn + 0.2, d: 0.8 },
+    { t: tGreet - 0.6, d: 0.6, p: yardHead }, { t: tGreet + 1.25, d: 0.7, p: doorP }, { t: T.cutOut - 1, d: 0.01, p: leonFace }, { t: T.close1 - 0.2, d: 0.6, p: () => V3(12.45, SW + 1.55, 0.4) }, { t: 43.2, d: 1.2, p: () => V3(12.45, SW + 1.1, 0.4) }];
+  return (t) => {
+    duA.update(t); syncPhone(du);
+    yA.forEach(a => a.update(t)); lA.update(t); S.swayAt(t);
+    leon.visible = t > T.cutIn;
+    // Vorgarten: Köpfe drehen sich zu Du, Gesichter kippen
+    const kR = smooth((t - tGreet - 0.25) / 0.6), duHead = headOf(du, 0.12)();
+    yard.forEach((h, i) => { h.rotation.y = yardRy[i] + (i === 1 ? -0.35 : i === 0 ? 0.5 : 0.25) * kR; h.updateMatrixWorld(true); if (kR > 0) lookAt(h, duHead, 0.85 * kR);
+      const before = ['laugh', 'laugh', 'happy'][i], after = ['sideeye', 'awkward', 'sideeye'][i];
+      h.userData.blockFace.set(kR > 0.4 ? after : before, { blink: blinkAt(t, i + 3), talk: i === 0 && kR < 0.3 ? Math.max(0, Math.sin(t * 8.5)) * 0.7 : 0 }); });
+    // Leon: unangenehm, macht die Tür zu
+    leon.userData.blockFace.set('awkward', { blink: blinkAt(t, 9) });
+    leaf.rotation.y = t < T.cutOut ? open0 : open0 * (1 - smooth((t - T.close0) / (T.close1 - T.close0)));
+    // Ego-Kamera
+    const walking = (t < T.arriveGate) || (t > T.goIn && t < T.cutIn);
+    const st = povPose(du, { steady: true, pitch: -0.06, bob: walking ? 0.012 : 0, t });
+    const kPh = t < 2.6 ? 1 : 1 - smooth((t - 2.6) / 0.55); phone.set(kPh); // Hook: Leons Story auf dem Handy, dann runter -> Partyhaus
+    const kW = smooth((t - tGreet + 0.35) / 0.35) * (1 - smooth((t - tGreet - 1.1) / 0.4)); hand.set(kW, { wave: t });
+    let dir = lookDir(t, st, look); dir.y -= 0.12 * kPh; dir.normalize();
+    const cam = stage.camera; cam.position.copy(st.eye); cam.lookAt(st.eye.clone().add(dir)); cam.fov = 60; cam.near = 0.03; cam.updateProjectionMatrix();
+    stage.setFocus(kPh > 0.5 ? st.eye.clone().addScaledVector(dir, 0.34) : st.eye.clone().addScaledVector(dir, t > T.cutOut ? 1.2 : 3.5));
+    hudLoc(t < T.cutOut ? 'LINDENWEG · 22:47' : 'LINDENWEG 7 · 23:02');
+  };
+}
+
+// ================================================================ Wohnzimmer (B: 16,3–41,5 s)
+async function buildRoom() {
+  const S = await buildWohnzimmer(stage, {});
+  await loadHumanAssets(); await loadBlockMoves();
+  const du = spawnBlock('du', { anim: 'Walk_Loop', x: 2.2, y: 0, z: 3.9, ry: Math.PI }); scene.add(du); povHide(du);
+  const cup = povHandRig(stage, du, { cup: true });
+  const v = clipSpeed(du, 'Walk_Loop');
+  const t0 = T.cutIn; const pIn = route([[2.2, 3.9], [2.15, 2.15]], t0, 1.0), pJ = route([[2.15, 2.15], [2.05, 2.05]], 20.4, 0.6), pM = route([[2.05, 2.05], [1.7, 1.75]], 24.5, 0.8), pD = route([[1.7, 1.75], [1.55, 0.6]], 29.3, 1.0), pF = route([[1.55, 0.6], [2.15, 0.2]], 33.0, 0.9);
+  const J = [0.3, 2.0], M = [-0.3, 1.5]; const jas = spawnBlock('jasmin', { x: J[0], y: 0, z: J[1] }), mia = spawnBlock('mia', { x: M[0], y: 0, z: M[1] });
+  const at = (p) => [p[p.length - 1][1], p[p.length - 1][2]];
+  const ryDu = [[t0, Math.PI], [pIn[1][0] - 0.3, Math.PI], [20.2, Math.PI], [20.9, angTo(at(pIn), J)], [24.4, angTo(at(pJ), J)], [25.1, angTo(at(pM), M)], [29.2, angTo(at(pM), M)], [29.7, angTo(at(pM), at(pD))],
+    [pD[1][0], angTo(at(pD), [0.9, -1.2])], [32.9, angTo(at(pD), [0.9, -1.2])], [33.5, angTo(at(pF), [3.17, -0.45])], [35.0, angTo(at(pF), [3.17, -0.45])], [35.6, angTo(at(pF), [0.0, 1.75])], [37.1, angTo(at(pF), [0.0, 1.75])], [37.8, angTo(at(pF), [2.15, -1.0])]];
+  const walkSeg = (at_, sp) => ({ anim: 'Walk_Loop', at: at_, speed: sp / v, fade: 0.35 }), idle = (at_) => ({ anim: 'Idle_Loop', at: at_, fade: 0.45 });
+  const duA = new Actor(du, { segs: [walkSeg(t0, 1.0), idle(pIn[1][0] - 0.15), walkSeg(20.35, 0.8), idle(pJ[1][0] - 0.1), walkSeg(24.45, 0.8), idle(pM[1][0] - 0.1), walkSeg(29.25, 1.0), idle(pD[1][0] - 0.15), walkSeg(32.95, 0.9), idle(pF[1][0] - 0.1)],
+    path: [...pIn, ...pJ, ...pM, ...pD, ...pF], ry: ryDu });
+  // Jasmin + Mia (reden miteinander, mit Bechern)
+  scene.add(jas, mia); faceTo(jas, mia.position); faceTo(mia, jas.position); holdCup(jas, 'r'); holdCup(mia, 'l', 0x2a5ad8); prepMoves(mia, ['Laugh']); prepMoves(jas, ['Talk with gestures']);
+  const ryJ = jas.rotation.y, ryM = mia.rotation.y, toDuJ = angTo(J, at(pJ)), toDuM = angTo(M, at(pM));
+  const jA = new Actor(jas, { segs: [{ anim: 'Ara:Talk with gestures', at: 0, offset: 1.0 }, { anim: 'Idle_Loop', at: 21.3, fade: 0.5 }, { anim: 'Idle_Talking_Loop', at: 24.6, fade: 0.5, offset: 0.6 }, { anim: 'Idle_Loop', at: 33.5, fade: 0.5 }],
+    ry: [[0, ryJ], [21.5, ryJ], [22.1, ryJ + 0.75 * ((toDuJ - ryJ + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [23.9, ryJ + 0.75 * ((toDuJ - ryJ + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [24.5, ryJ]] });
+  const mA = new Actor(mia, { segs: [{ anim: 'Ara:Laugh', at: 0, offset: 0.3 }, { anim: 'Idle_Loop', at: 20.0, fade: 0.6 }],
+    ry: [[0, ryM], [25.5, ryM], [26.1, ryM + 0.8 * ((toDuM - ryM + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [28.0, ryM + 0.8 * ((toDuM - ryM + 3 * Math.PI) % (2 * Math.PI) - Math.PI)], [28.6, ryM]] });
+  // Tanzfläche: Kreis um WANCHOR.dance, Lücke nach Süden – als Du kommt, macht die Gruppe zu und dreht ihm den Rücken zu
+  const dc = WANCHOR.dance;
+  const dancers = [spawnBlock('ben', { x: 0.35, y: 0, z: -0.95 }), extra('tealGirl', { x: 0.95, y: 0, z: -1.85 }), extra('beigeGuy', { x: 1.55, y: 0, z: -1.05 }), extra('limeGirl', { x: 0.25, y: 0, z: -1.65 })];
+  dancers.forEach(h => { scene.add(h); faceTo(h, dc); }); holdCup(dancers[0], 'r'); holdCup(dancers[2], 'r'); holdCup(dancers[3], 'l');
+  prepMoves(dancers[1], ['Dance (party bounce)']); prepMoves(dancers[3], ['Dance (groove)']); prepMoves(dancers[2], ['Cheer']);
+  const tClose = 30.9;
+  const dA = [
+    new Actor(dancers[0], { segs: [{ anim: 'Dance_Loop', at: 0, offset: 0.3 }, { anim: 'Idle_Talking_Loop', at: tClose, fade: 0.5 }], path: [[0, 0.35, -0.95], [tClose, 0.35, -0.95], [tClose + 0.9, 0.6, -0.62]], ry: [[0, angTo([0.35, -0.95], [0.9, -1.2])], [tClose, angTo([0.35, -0.95], [0.9, -1.2])], [tClose + 0.9, angTo([0.6, -0.62], [1.0, -1.35])]] }),
+    new Actor(dancers[1], { segs: [{ anim: 'Ara:Dance (party bounce)', at: 0, offset: 0.7 }, { anim: 'Idle_Loop', at: tClose - 0.2, fade: 0.4 }, { anim: 'Ara:Dance (party bounce)', at: tClose + 1.0, fade: 0.5 }], ry: [[0, 0], [tClose + 0.2, 0], [tClose + 1.0, Math.PI - 0.4]] }),
+    new Actor(dancers[2], { segs: [{ anim: 'Dance_Loop', at: 0, offset: 1.6 }, { anim: 'Ara:Cheer', at: 23.0, fade: 0.4 }, { anim: 'Dance_Loop', at: 26.0, fade: 0.4, offset: 0.2 }, { anim: 'Idle_Loop', at: tClose, fade: 0.5 }], path: [[0, 1.55, -1.05], [tClose, 1.55, -1.05], [tClose + 0.9, 1.3, -0.65]], ry: [[0, angTo([1.55, -1.05], [0.9, -1.2])], [tClose, angTo([1.55, -1.05], [0.9, -1.2])], [tClose + 0.9, angTo([1.3, -0.65], [0.8, -1.4])]] }),
+    new Actor(dancers[3], { segs: [{ anim: 'Ara:Dance (groove)', at: 0, offset: 0.2 }] }),
+  ];
+  // Sofa (sitzen, lachen, trinken), Trinker am Sideboard, Leon am Lautsprecher
+  const s1 = extra('purpleGuy', { anim: 'Sitting_Idle_Loop' }), s2 = extra('orangeGirl', { anim: 'Sitting_Idle_Loop' }); scene.add(s1, s2);
+  const sA = [new Actor(s1, { segs: [{ anim: 'Sitting_Talking_Loop', at: 0, offset: 0.4 }] }), new Actor(s2, { segs: [{ anim: 'Sitting_Idle_Loop', at: 0, offset: 0.9 }] })];
+  [[s1, 0], [s2, 1]].forEach(([h, i]) => { h.rotation.y = Math.PI / 2; sitOn(h, WANCHOR.sofaSeats[i]); }); holdCup(s1, 'r'); holdCup(s2, 'l');
+  const sit = [s1, s2].map(h => h.position.clone());
+  const drinker = extra('navyGuy', { x: -0.55, y: 0, z: -1.75 }); scene.add(drinker); faceTo(drinker, V3(0.5, 0, 0.5)); holdCup(drinker, 'r');
+  const drA = new Actor(drinker, { segs: [{ anim: 'Idle_Loop', at: 0 }, { anim: 'Consume', at: 18.7, fade: 0.4 }, { anim: 'Idle_Loop', at: 21.1, fade: 0.4 }, { anim: 'Consume', at: 26.5, fade: 0.4 }, { anim: 'Idle_Loop', at: 28.9, fade: 0.4 }] });
+  const leon = spawnBlock('leon', { x: 2.35, y: 0, z: -1.75 }); scene.add(leon); prepMoves(leon, ['Texting']);
+  const pL = route([[2.35, -1.75], [2.15, -1.0]], 36.9, 1.0);
+  const lA = new Actor(leon, { segs: [{ anim: 'Ara:Texting', at: 0, offset: 0.5 }, { anim: 'Walk_Loop', at: 36.85, speed: 1.0 / clipSpeed(leon, 'Walk_Loop'), fade: 0.35 }, { anim: 'Idle_Loop', at: pL[1][0] - 0.1, fade: 0.4 }],
+    path: [[0, 2.35, -1.75], ...pL], ry: [[0, -2.2], [36.7, -2.2], [37.2, angTo([2.35, -1.75], [2.15, 0.2])]] });
+  const actors = [duA, jA, mA, ...dA, ...sA, drA, lA]; window.__dbg = { du, dancers, leon };
+  { const f = new THREE.PointLight(0xffd0e0, 1.4, 3.5, 1.8); f.position.set(2.2, 2.0, -0.1); scene.add(f); } // Gesichtslicht für Leon
+  stage.build({ focus: V3(1, 1.5, 0) }); stage.limitLights(V3(1.6, 1.4, 0.6), 9);
+  const jasF = headOf(jas, 0.14), miaF = headOf(mia, 0.14), leonF = headOf(leon, 0.14);
+  const girls = () => jasF().lerp(miaF(), 0.5);
+  const look = [{ t: 0 }, { t: 16.2, d: 0.9, p: () => V3(dc.x, 1.45, dc.z) }, { t: 17.8, d: 1.0, p: () => V3(-2.3, 1.0, 0.45) }, { t: 19.1, d: 0.8, p: () => V3(-0.55, 1.55, -1.75) }, { t: 20.3, d: 0.7, p: jasF }, { t: 24.4, d: 0.6, p: miaF },
+    { t: 29.2, d: 0.6 }, { t: 30.1, d: 0.6, p: () => V3(0.95, 1.4, -1.25) }, { t: 32.9, d: 0.7, p: () => WANCHOR.photo.clone() }, { t: 35.0, d: 0.7, p: girls }, { t: 37.1, d: 0.6, p: leonF }];
+  return (t) => {
+    for (const a of actors) a.update(t); syncPhone(leon); syncPhone(jas); syncPhone(mia);
+    [s1, s2].forEach((h, i) => { h.position.copy(sit[i]); h.updateMatrixWorld(true); });
+    S.beatAt(t, 1);
+    const duH = headOf(du, 0.12)();
+    // Jasmin: „Geile Party!“ -> schaut ihn an, „… Danke.“, dreht sich weg; später flüstert sie Mia etwas zu
+    const kJ = smooth((t - 21.6) / 0.4) * (1 - smooth((t - 23.95) / 0.5)), kW = smooth((t - 35.1) / 0.5) * (1 - smooth((t - 37.6) / 0.6));
+    if (kJ > 0) lookAt(jas, duH, 0.9 * kJ); else if (kW > 0) lookAt(jas, miaF(), 0.8 * kW);
+    jas.userData.blockFace.set(kW > 0.3 ? (t > 36.4 ? 'sideeye' : 'smirk') : kJ > 0.2 ? 'neutral' : t > 24.5 ? 'laugh' : 'happy', { blink: blinkAt(t, 4), talk: kJ > 0.2 ? lip(t, 'danke') : kW > 0.3 ? lip(t, 'whisper') * 0.5 : t < 21.3 || (t > 24.6 && t < 33.5) ? Math.max(0, Math.sin(t * 8.1)) * 0.6 : 0, look: kW > 0.3 && t > 36.3 ? [0.6, 0] : null });
+    // Mia: „Anstoßen?“ -> „Ne, passt schon.“, dreht sich weg; beim Flüstern schaut sie zu Du
+    const kM = smooth((t - 25.8) / 0.4) * (1 - smooth((t - 28.0) / 0.5)), kM2 = smooth((t - 36.0) / 0.4) * (1 - smooth((t - 37.7) / 0.5));
+    if (kM > 0) lookAt(mia, duH, 0.9 * kM); else if (kM2 > 0) lookAt(mia, duH, 0.7 * kM2);
+    mia.userData.blockFace.set(kM > 0.2 ? 'sideeye' : kM2 > 0.2 ? 'sideeye' : t < 20.2 ? 'laugh' : 'happy', { blink: blinkAt(t, 5), talk: kM > 0.2 ? lip(t, 'passt') : 0 });
+    // Tanzgruppe: nach dem Zumachen Becken exakt zur Kreismitte drehen (manche Clips drehen die Hüfte mit) -> Rücken zu Du
+    [0, 2].forEach(i => { const h = dancers[i], k = smooth((t - tClose - 0.3) / 0.6); if (k <= 0) return; const fw = V3(0, 0, 1).applyQuaternion(h.userData.bones.pelvis.getWorldQuaternion(new THREE.Quaternion())); const want = Math.atan2(0.95 - h.position.x, -1.3 - h.position.z);
+      let d = want - Math.atan2(fw.x, fw.z); d = Math.atan2(Math.sin(d), Math.cos(d)); h.rotation.y += d * k; h.updateMatrixWorld(true); });
+    // Tanzgruppe: gute Laune, als Du kommt: Blick zu ihm, dann Rücken
+    dancers.forEach((h, i) => { const k = smooth((t - tClose + 0.6) / 0.4) * (1 - smooth((t - tClose - 0.6) / 0.4)); if (k > 0 && i === 1) lookAt(h, duH, 0.9 * k);
+      h.userData.blockFace.set(k > 0.3 && i === 1 ? 'sideeye' : t > tClose + 0.6 ? ['smirk', 'laugh', 'smirk', 'happy'][i] : ['laugh', 'happy', 'laugh', 'happy'][i], { blink: blinkAt(t, 10 + i) }); });
+    // Sofa: reden und lachen; wenn Du reinkommt, kurzer Blick
+    [s1, s2].forEach((h, i) => { const k = smooth((t - 18.0) / 0.5) * (1 - smooth((t - 19.4) / 0.5)); if (k > 0) lookAt(h, duH, 0.7 * k); h.userData.blockFace.set(k > 0.3 ? 'sideeye' : i ? 'laugh' : 'happy', { blink: blinkAt(t, 20 + i), talk: i === 0 && k < 0.3 ? Math.max(0, Math.sin(t * 7.7 + 1)) * 0.6 : 0 }); });
+    drinker.userData.blockFace.set(t > 33 ? 'sideeye' : 'happy', { blink: blinkAt(t, 30) }); if (t > 33) lookAt(drinker, duH, 0.6 * smooth((t - 33) / 0.5));
+    // Leon: am Handy (Musik), dann kommt er zu Du: „Ey … ist heute eher so ’n kleiner Kreis.“
+    const kL = smooth((t - 37.0) / 0.5); if (kL > 0) lookAt(leon, duH, 0.9 * kL);
+    leon.userData.blockFace.set(t > 37.0 ? 'awkward' : 'happy', { blink: blinkAt(t, 7), talk: lip(t, 'kreis') });
+    // Ego-Kamera + Becher
+    const walking = (t < pIn[1][0]) || (t > 20.4 && t < pJ[1][0]) || (t > 24.5 && t < pM[1][0]) || (t > 29.3 && t < pD[1][0]) || (t > 33.0 && t < pF[1][0]);
+    const st = povPose(du, { steady: true, pitch: -0.06, bob: walking ? 0.011 : 0, t });
+    const kC = smooth((t - 24.5) / 0.55) * (1 - smooth((t - 28.7) / 0.6)), raise = smooth((t - 25.45) / 0.5) * (1 - smooth((t - 27.2) / 0.5)); cup.set(kC, { raise });
+    const dir = lookDir(t, st, look); const cam = stage.camera; cam.position.copy(st.eye); cam.lookAt(st.eye.clone().add(dir)); cam.fov = 64 - 12 * smooth((t - 35.2) / 0.8) * (1 - smooth((t - 37.0) / 0.6)); cam.near = 0.03; cam.updateProjectionMatrix();
+    const tgt = [...look].reverse().find(s => s.t <= t); stage.setFocus(tgt && tgt.p ? tgt.p() : st.eye.clone().addScaledVector(dir, 2.5));
+    hudLoc('LINDENWEG 7 · 22:49');
+  };
+}
+let hudLocText = ''; function hudLoc(s) { if (s !== hudLocText) { hudLocText = s; const el = document.querySelector('.hud .loc'); if (el) el.textContent = s; } }
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>

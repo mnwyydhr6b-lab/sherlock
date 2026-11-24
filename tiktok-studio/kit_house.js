@@ -167,6 +167,7 @@ export function makeHouse(o) {
     add(leaf, rbox(leafW, leafH, 0.07, 0.012), std(dr.color ?? 0x2b2f34, 0.45, 0.25), leafW / 2, leafH / 2, 0);
     const dglass = add(leaf, glassGeo(0.16, leafH - 0.5, dr.glassTile ?? TILE.curtainLit), m.glass, leafW * 0.72, leafH / 2, 0.037, { cast: false });
     add(leaf, new THREE.CylinderGeometry(0.014, 0.014, 0.9, 8), m.steel, leafW * 0.2, leafH * 0.48, 0.075);
+    g.userData.doorLeaf = leaf; // Tür im Video bewegen: leaf.rotation.y (0 = zu, positiv = nach innen offen)
     if (dr.open) { leaf.rotation.y = dr.open; // swing inward (toward -z): rotate around hinge
       // lit hallway box
       const hw = dr.w + 0.6, hd = 2.4, hh = dr.h + 0.4; const hallMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: dr.hallColor ?? 0xff6ad5, emissiveIntensity: 1.0, side: THREE.BackSide });

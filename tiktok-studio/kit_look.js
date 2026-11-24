@@ -119,7 +119,7 @@ export function createStage({ preset = 'nacht', W = 1080, H = 1920, query = loca
           void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; c = mix(c, c*c*(3.0-2.0*c), con); float l = dot(c, vec3(0.299,0.587,0.114)); c = mix(vec3(l), c, sat);
             c += vec3(-0.012, 0.0, 0.03) * (1.0 - l) * (1.0 - l) + vec3(0.025, 0.01, -0.012) * l * l;
             vec2 d = (vUv - 0.5) * vec2(1.0, 0.62); c *= 1.0 - dot(d, d) * vig; gl_FragColor = vec4(c, 1.0); }` });
-      composer.addPass(grade); composer.setSize(W, H);
+      composer.addPass(grade); composer.setSize(W, H); stage.grade = grade; // stage.grade.uniforms.sat.value pro Frame ändern (Welt verliert Farbe)
       // Umgebungsverdeckung und Tiefe für die Unschärfe in halber Auflösung (spart viel Zeit, kaum sichtbar)
       if (!Q.has('fullpost')) { if (stage.passes.gtao) stage.passes.gtao.setSize(W / 2, H / 2); if (bokeh) bokeh.renderTargetDepth.setSize(W / 2, H / 2); }
       // Tiefenschärfe nutzt die Tiefe, die die Umgebungsverdeckung ohnehin berechnet (spart einen kompletten Szenen-Durchgang)

@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1920px;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Referenz "Party-Wohnzimmer" (Set 4): Blick aus der Tür in den Raum, Clique tanzt und trinkt. ?shot=tuer|foto|sofa
+import * as THREE from 'three';
+import { spawnBlock } from './kit_block.js';
+import { createStage } from './kit_look.js';
+import { buildWohnzimmer, WANCHOR } from './set_wohnzimmer.js';
+import { loadHumanAssets, faceTo, holdCup, sitOn } from './kit_cast.js';
+
+const stage = createStage({ preset: 'innen_nacht' });
+const { scene, qn, Q } = stage; const shot = Q.get('shot') || 'tuer';
+async function main() {
+  const S = await buildWohnzimmer(stage, {}); S.beatAt(0.3);
+  if (!Q.has('nochar')) {
+    await loadHumanAssets();
+    const dc = WANCHOR.dance;
+    const dancers = [
+      spawnBlock('ben', { anim: 'Dance_Loop', time: 0.3, x: dc.x - 0.55, z: dc.z + 0.2 }),
+      spawnBlock('tarik', { anim: 'Dance_Loop', time: 1.1, x: dc.x + 0.5, z: dc.z - 0.35 }),
+      spawnBlock('mia', { spec: { shirt: 0x3ac0b0, pants: 0x2b2b33, hair: 0x2a1a12, hairStyle: 'bun', top: 'tee', skin: 0xe8b890 }, anim: 'Dance_Loop', time: 0.7, x: dc.x + 0.05, z: dc.z - 0.75 }),
+      spawnBlock('ben', { spec: { shirt: 0xe8e0d0, pants: 0x5a4a3a, hair: 0xc8a060, hairStyle: 'short', top: 'shirt', skin: 0xf0c8a8 }, anim: 'Dance_Loop', time: 1.6, x: dc.x + 0.75, z: dc.z + 0.45 }),
+    ];
+    dancers.forEach(h => { scene.add(h); faceTo(h, dc); }); holdCup(dancers[0], 'r'); holdCup(dancers[3], 'r');
+    const jas = spawnBlock('jasmin', { anim: 'Idle_Talking_Loop', time: 1.2, x: 1.0, z: 1.0 }); const mia = spawnBlock('mia', { anim: 'Idle_Loop', time: 0.6, x: 0.35, z: 0.45 });
+    scene.add(jas, mia); faceTo(jas, mia.position); faceTo(mia, jas.position); holdCup(jas, 'r'); holdCup(mia, 'l', 0x2a5ad8);
+    const leon = spawnBlock('leon', { anim: 'Idle_Loop', time: 0.4, x: 2.35, z: -1.75 }); scene.add(leon); faceTo(leon, dc);
+    const s1 = spawnBlock('ben', { spec: { shirt: 0x6a4ab8, pants: 0x2b2b33, hair: 0x1a1a1a, hairStyle: 'buzz', top: 'hoodie', skin: 0xb98a62 }, anim: 'Sitting_Idle_Loop', time: 0.5 });
+    const s2 = spawnBlock('mia', { spec: { shirt: 0xf08a3a, pants: 0x4a6fae, hair: 0xe8c890, hairStyle: 'long', top: 'jacket', shirt2: 0xffffff, skin: 0xf3cfb0 }, anim: 'Sitting_Idle_Loop', time: 0.9 });
+    [[s1, 0], [s2, 1]].forEach(([h, i]) => { scene.add(h); h.rotation.y = Math.PI / 2; sitOn(h, WANCHOR.sofaSeats[i]); }); holdCup(s1, 'r');
+    [...dancers, jas, mia, leon, s1, s2].forEach((h, i) => h.userData.blockFace.set(['laugh', 'happy', 'laugh', 'happy', 'laugh', 'happy', 'happy', 'laugh', 'happy'][i]));
+  }
+  const V = { tuer: { pos: [2.15, 1.62, 3.3], target: [0.4, 1.25, -1.5], fov: 62 }, foto: { pos: [1.6, 1.6, 0.1], target: [3.17, 1.5, -0.45], fov: 55 }, sofa: { pos: [0.6, 1.6, 1.5], target: [-2.4, 0.9, 0.2], fov: 60 } }[shot];
+  stage.view(V).build({ focus: new THREE.Vector3(...V.target), aperture: 0.0006 }); stage.limitLights(new THREE.Vector3(...V.pos), 8); stage.ready();
+}
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>

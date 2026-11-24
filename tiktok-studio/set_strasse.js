@@ -62,7 +62,7 @@ export async function buildStrasse(stage, o = {}) {
   const gableW = (lit) => [{ x: -2.0, y: 1.3, w: 1.0, h: 1.25, sash: 1, tile: lit ? TILE.party2 : TILE.warm }, { x: 1.8, y: 1.3, w: 1.0, h: 1.25, sash: 1, tile: TILE.dark, shutter: 0.6 }, { x: -2.0, y: 4.0, w: 1.0, h: 1.3, sash: 1, tile: TILE.dark }, { x: 0, y: 6.3, w: 0.75, h: 0.95, sash: 1, tile: TILE.warm2 }];
   const partyHouse = makeHouse({ seed: 1, w: 10.5, d: 9, floors: 2, fh: 2.75, pitch: 40, wall: 0xf4efe6, roof: 0x5c616b, front: partyFront, right: gableW(party), left: gableW(false),
     back: [{ x: -2, y: 1.3, w: 1.2, h: 1.25, tile: party ? TILE.party3 : TILE.warm }, { x: 2, y: 4.0, w: 1.2, h: 1.3, tile: TILE.dark }],
-    door: party ? { x: 0.4, w: 1.15, h: 2.15, color: 0x2b2f34, open: o.doorOpen ?? 1.25, hallColor: 0xff5ac8, silhouettes: [[0.25, 1.1, 1.0], [-0.3, 1.9, 0.95]], number: 7, glassTile: TILE.party1, lampIntensity: 1.0 }
+    door: party ? { x: 0.4, w: 1.15, h: 2.15, color: 0x2b2f34, open: o.doorOpen ?? 1.25, hallColor: 0xff5ac8, silhouettes: o.silhouettes ?? [[0.25, 1.1, 1.0], [-0.3, 1.9, 0.95]], number: 7, glassTile: TILE.party1, lampIntensity: 1.0 }
       : { x: 0.4, w: 1.15, h: 2.15, color: 0x2b2f34, number: 7, glassTile: TILE.stairs, lampIntensity: day ? 0 : 1.5 },
     chimney: [2.8, -1.3], garage: { w: 3.3, d: 6.5, setback: 0.6 }, velux: [[-2.6, 0.42], [2.2, 0.42]], veluxTile: party ? TILE.party5 : TILE.dark });
   partyHouse.rotation.y = -Math.PI / 2; partyHouse.position.set(12.5 + 4.5, SW, 0); scene.add(partyHouse);

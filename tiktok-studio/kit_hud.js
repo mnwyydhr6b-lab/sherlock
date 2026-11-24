@@ -1,4 +1,5 @@
-// kit_hud.js – Serien-Overlay (wie im Piloten): Ort/Uhrzeit, Zähler "SELBSTRESPEKT", Untertitel, Endkarte "Was wäre, wenn …?" + gelbe Frage.
+// kit_hud.js – Serien-Overlay: Ort/Uhrzeit, Zähler "SELBSTRESPEKT", Untertitel und die einheitliche Endkarte (seit 23.11.):
+// dunkles Bild -> klein "REGEL NR. X" -> Regel groß in Weiß -> gelbe kursive Frage -> klein "Folge für Regel Nr. X+1". Pro Frame: hud.endCard(t - start, { nr, rule, question })
 const CSS = `
 @font-face{font-family:Garamond;src:url(./node_modules/@fontsource/eb-garamond/files/eb-garamond-latin-500-normal.woff2) format('woff2');font-style:normal;font-weight:500}
 @font-face{font-family:Garamond;src:url(./node_modules/@fontsource/eb-garamond/files/eb-garamond-latin-500-italic.woff2) format('woff2');font-style:italic;font-weight:500}
@@ -13,13 +14,18 @@ const CSS = `
 .dark{position:absolute;inset:0;background:#05060c;z-index:6;pointer-events:none}
 .flash{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(255,40,40,0) 55%,rgba(255,30,30,.45) 100%);z-index:6;pointer-events:none}
 .title{position:absolute;left:110px;right:110px;top:560px;text-align:center;color:#fff;font-family:Garamond,serif;font-size:76px;line-height:1.12;text-shadow:0 3px 18px rgba(0,0,0,.9);z-index:7}
+
+.rnr{position:absolute;left:0;right:0;top:520px;text-align:center;color:#fff;font-family:Inter,sans-serif;font-weight:800;font-size:34px;letter-spacing:10px;opacity:.9;z-index:7}
+.rnr:after{content:'';display:block;width:90px;height:4px;background:#f2cf55;margin:26px auto 0}
+.rule{position:absolute;left:100px;right:100px;top:640px;text-align:center;color:#fff;font-family:Garamond,serif;font-size:80px;line-height:1.12;text-shadow:0 3px 18px rgba(0,0,0,.9);z-index:7}
+.follow{position:absolute;left:0;right:0;top:1500px;text-align:center;color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:30px;letter-spacing:3px;opacity:.85;z-index:7}
 .question{position:absolute;left:90px;right:90px;top:1060px;text-align:center;color:#f2cf55;font-family:Garamond,serif;font-style:italic;font-size:60px;text-shadow:0 3px 14px rgba(0,0,0,.9);z-index:7}`;
 export async function createHUD(parent = document.getElementById('wrap')) {
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
   const el = (cls, html = '') => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; parent.appendChild(d); return d; };
   const hud = el('hud', '<div class="loc"></div><div class="lab">SELBSTRESPEKT</div><div class="num">100 %</div>');
-  const band = el('band'), sub = el('sub'), dark = el('dark'), flash = el('flash'), title = el('title'), question = el('question');
-  [band, sub, dark, flash, title, question].forEach(d => d.style.opacity = 0);
+  const band = el('band'), sub = el('sub'), dark = el('dark'), flash = el('flash'), title = el('title'), question = el('question'), rnr = el('rnr'), rule = el('rule'), follow = el('follow');
+  [band, sub, dark, flash, title, question, rnr, rule, follow].forEach(d => d.style.opacity = 0);
   await Promise.all(['500 40px Garamond', 'italic 500 40px Garamond', '700 20px Inter', '800 30px Inter'].map(f => document.fonts.load(f))); await document.fonts.ready;
   return {
     hud(op = 1) { hud.style.opacity = op; },
@@ -28,6 +34,12 @@ export async function createHUD(parent = document.getElementById('wrap')) {
     counter(v, fl = 0) { const n = hud.querySelector('.num'); n.textContent = Math.round(v) + ' %'; n.style.color = fl > 0.05 ? `rgb(255,${255 - 190 * fl | 0},${255 - 190 * fl | 0})` : '#fff'; n.style.transform = `scale(${1 + 0.12 * fl})`; flash.style.opacity = fl * 0.8; },
     sub(text, op = 1) { sub.textContent = text; sub.style.opacity = op; band.style.opacity = op * 0.9; },
     dark(op) { dark.style.opacity = op; },
+    // Einheitliche Endkarte. lt = Sekunden seit Beginn der Endkarte (< 0: unsichtbar). Dauer ca. 5 s.
+    endCard(lt, { nr, rule: r, question: q, follow: f = `Folge für Regel Nr. ${nr + 1}` }) { const sm = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+      const d = sm(lt / 0.6), a = sm((lt - 0.3) / 0.5), b = sm((lt - 0.7) / 0.6), c = sm((lt - 1.9) / 0.6), e = sm((lt - 2.8) / 0.6);
+      dark.style.opacity = d * 0.82; rnr.textContent = `REGEL NR. ${nr}`; rule.textContent = r; question.textContent = q; follow.textContent = f;
+      rnr.style.opacity = a * 0.9; rule.style.opacity = b; rule.style.transform = `translateY(${(1 - b) * 24}px)`; question.style.opacity = c; question.style.top = '1180px'; follow.style.opacity = e * 0.85;
+      if (lt > 0) { hud.style.opacity = 1 - d; sub.style.opacity = 0; band.style.opacity = 0; } },
     end(t, q, opT, opQ) { title.textContent = t; question.textContent = q; title.style.opacity = opT; question.style.opacity = opQ; },
   };
 }

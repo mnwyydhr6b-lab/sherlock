@@ -8,7 +8,7 @@
 //   await loadBlockMoves();  playMove(du, 'Texting', 2.0)           // Standbild
 //   prepMoves(du, ['Texting', 'Talk with gestures']) -> Actor-Segmente mit anim: 'Ara:Texting' usw.; pro Frame syncPhone(du)
 import * as THREE from 'three';
-import { rbox } from './kit_world.js';
+import { rbox, std } from './kit_world.js';
 import { spawn, CAST } from './kit_cast.js';
 import { loadMoves, retarget, showPhone } from './kit_retarget.js';
 
@@ -229,6 +229,24 @@ export function povPhoneRig(stage, h, { screen = null, screenColor = 0x9ad0ff, t
     // neuen Bildschirm-Inhalt zeigen (z. B. chatTex mit einer Nachricht mehr, sobald sie im Video auftaucht)
     setScreen(t) { scrM.map = t; scrM.color.setScalar(0.8); scrM.needsUpdate = true; },
     set(k, zoom = 0) { g.visible = k > 0.005; const s = k * k * (3 - 2 * k), z = zoom * zoom * (3 - 2 * zoom); g.position.lerpVectors(down, up, s).lerp(near, z * s); g.rotation.z = (1 - s) * 0.18; } };
+}
+// Rechte Hand in der Ego-Perspektive (wie povPhoneRig an der Kamera): winken oder Becher halten/anstoßen.
+// const hd = povHandRig(stage, du, { cup: true }); pro Frame hd.set(k, { wave: t })  (k 0 = unten aus dem Bild, 1 = oben; wave: Zeit -> Winken)
+export function povHandRig(stage, h, { cup = false, cupColor = 0xd8262c } = {}) {
+  const spec = h.userData.blockSpec, cam = stage.camera; if (!cam.parent) stage.scene.add(cam);
+  const g = new THREE.Group(); g.name = 'PovHand'; const arm = new THREE.Group(); g.add(arm);
+  const mk = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = false; m.receiveShadow = true; m.frustumCulled = false; arm.add(m); return m; };
+  const skin = toy(shade(spec.skin, 0.85), { clearcoat: 0.1 }), sleeve = toy(spec.shirt), cuff = toy(shade(spec.shirt, 0.82));
+  if (cup) { mk(rbox(0.07, 0.075, 0.07, 0.016, 3), skin, 0, 0, 0); mk(rbox(0.024, 0.045, 0.026, 0.009, 2), skin, -0.04, 0.01, 0.01, 0, 0, 0.3); // Faust um den Becher, Daumen
+    const cm = std(cupColor, 0.4, 0, { side: THREE.DoubleSide }); mk(new THREE.CylinderGeometry(0.047, 0.034, 0.125, 18, 1, true), cm, 0, 0.035, 0); mk(new THREE.TorusGeometry(0.047, 0.004, 6, 22), std(0xffffff, 0.4), 0, 0.097, 0, Math.PI / 2);
+    mk(new THREE.CircleGeometry(0.045, 18), std(0xd8b040, 0.3, 0, { emissive: 0x3a2a08, emissiveIntensity: 0.3 }), 0, 0.075, 0, -Math.PI / 2); } // Getränk
+  else { mk(rbox(0.085, 0.1, 0.05, 0.016, 3), skin, 0, 0.02, 0); mk(rbox(0.024, 0.05, 0.026, 0.009, 2), skin, -0.052, 0.008, 0.004, 0, 0, 0.5); } // offene Klötzchen-Hand (Handrücken zu dir)
+  mk(rbox(0.1, 0.34, 0.1, 0.025, 3), sleeve, 0.02, -0.21, 0.03, 0.15, 0, -0.12); mk(rbox(0.108, 0.04, 0.108, 0.015, 2), cuff, 0.006, -0.055, 0.008, 0.15, 0, -0.12);
+  cam.add(g); g.visible = false;
+  const down = cup ? new THREE.Vector3(0.09, -0.42, -0.36) : new THREE.Vector3(0.16, -0.55, -0.56), up = cup ? new THREE.Vector3(0.085, -0.15, -0.48) : new THREE.Vector3(0.112, -0.085, -0.56);
+  const toast = new THREE.Vector3(0.075, -0.1, -0.56);
+  return { group: g, set(k, { wave = null, raise = 0 } = {}) { g.visible = k > 0.005; const s = k * k * (3 - 2 * k), r = raise * raise * (3 - 2 * raise); g.position.lerpVectors(down, up, s).lerp(toast, r * s);
+    arm.rotation.set(-0.15 - 0.2 * r, 0, wave !== null ? Math.sin(wave * 11) * 0.22 * s : 0.05); } };
 }
 // Bildschirm-Inhalt: Chat (Messenger, dunkel). msgs: [{ me, text, time }], seen: 'Gelesen 22:14', typing: true = „schreibt …“-Blase.
 // Große Schrift, damit man es im Video lesen kann. Gibt eine CanvasTexture zurück (.image = Canvas, auch für 2D-Einblendungen nutzbar).
