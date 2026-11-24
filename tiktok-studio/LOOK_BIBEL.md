@@ -20,6 +20,7 @@ Diese Datei legt fest, wie die Serie aussieht. **Vor jeder neuen Szene lesen und
 | `set_strasse_nacht.png` | Set 1: Lindenweg nachts, Partyhaus Nr. 7, Gartentor, Ballons, Lichterketten |
 | `set_zimmer_bett.png` / `set_zimmer_schreibtisch.png` | Set 2: Jugendzimmer von „Du“ nachts (LED-Streifen, Gaming-Ecke) |
 | `set_schule_tag.png` | Set 3: Gesamtschule Lindenhof bei Tag, Schulhof |
+| `set_wohnzimmer.png` | Set 4: Party-Wohnzimmer im Partyhaus (Leons 18.): Sofa, Couchtisch mit Bechern/Flaschen/Pizza, Lautsprecher, Lichterketten, „18“-Ballons, Gruppenfoto „DIE GANG ♥“ |
 | `uebersicht_sets.png` | Alle Sets nebeneinander |
 | `../kanal/profilbild.png` | Profilbild des Kanals „Regeln TV“: Du mit Sonnenbrille, goldener Aura und verschränkten Armen, Szene `profil_aura.html?v=3` |
 
@@ -88,6 +89,7 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
   - Kopf folgt der Animation: `povPose(du)`
   - **Handy wie in Spielen:** `const ph = povPhoneRig(stage, du, { screen: partyStoryTex() })`, pro Frame `ph.set(k)` (0 = unten aus dem Bild, 1 = hochkant vor dir, Bildschirm zu dir, Klötzchen-Hände halten es). Eigene Bildschirm-Inhalte als Canvas-Textur übergeben (Vorlage: `partyStoryTex()` in `kit_block.js`). Dabei die Kamera nur leicht nach unten neigen.
   - **Chats (Nutzer-Entscheidung 23.11.): immer auf dem Handy in deinen Händen**, nicht als 2D-Einblendung. `chatTex({ name, msgs: [{ me, text, time }], seen: 'Gelesen 22:14', typing })` zeichnet einen Chat mit großer Schrift; `ph.set(1, 1)` holt das Handy zum Lesen näher an die Augen. Nachrichten im Video nacheinander zeigen: sobald eine neue dazukommt, `ph.setScreen(chatTex({ … msgs: bisher }))` (Texturen vorab einmal pro Stand erzeugen) und ein „Pling“ in den Ton legen. Beispiel: `chat_test.html` (Standard `mode=hand`; `mode=overlay` nur, falls mal sehr viel Text kommt).
+  - **Hand in der Ego-Perspektive:** `const hd = povHandRig(stage, du, { cup })`, pro Frame `hd.set(k, { wave: t })` zum Winken oder mit `cup: true` und `hd.set(k, { raise })` zum Becher-Anheben/Anstoßen.
   - Der Handy-Bildschirm leuchtet bewusst knapp unter der Bloom-Schwelle, damit die Schrift scharf bleibt.
   - Blick zu Personen: `dir` zum Kopf/Gesicht der Person hin mischen (die anderen reagieren mit ihren Gesichtern)
   - Übergänge mit `smooth()` zwischen den Blickrichtungen mischen (siehe `clip_test.html`), Bildwinkel 60–70
@@ -137,6 +139,12 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
   - Gaming: `keyboard`, `mouse`, `monitor`
 - Optionen: `ledColor`, `ledI`, `duvet`, `accent`.
 
+**Party-Wohnzimmer (`set_wohnzimmer.js`, Preset `innen_nacht`, Testseite `wohnzimmer.html?shot=tuer|foto|sofa`)**
+- Raum x −3,2…3,2, z −2,6…2,6, Decke 2,6. Offene Tür in der Südwand bei x = 2,2, dahinter ein warmer Flur (bis z = 5,2).
+- Anker im Objekt `WANCHOR`: `hallStart`, `doorway`, `sofaSeats[0..2]` (Sitzpunkte, Blick +x), `table`, `dance` (Tanzflächen-Mitte), `speaker`, `photo` (Gruppenfoto Ostwand), `sideboard`.
+- `beatAt(t)` lässt Partylicht und Lautsprecher-Ring im Takt pulsieren (jedes Frame aufrufen).
+- Neue Requisiten (exportiert): `makeBottle(farbe, höhe)` – Flaschen ohne Etikett.
+
 **Schule (`set_schule.js`)**
 - Zaun bei z = 3,5 mit Tor. Fassade bei z = −24.
 - Anker im Objekt `SCHANCHOR`: `pingpong`, `treeBench(i)`, `busStop`, `entrance`, `yard`.
@@ -150,4 +158,7 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 - Sitzende Figuren: Animation `Sitting_Idle_Loop` und dann `sitOn(h, sitzpunkt)`.
 - Der Klötzchen-Kopf ist groß: Bei Bewegungen mit Hand am Kopf (Phone call, Cry) und bei hohen Stuhllehnen kurz im Testbild prüfen.
 - URL-Parameter `ty` ist für die Kamera reserviert (Blickziel), nicht für eigene Zwecke verwenden.
+- Manche Skelett-Clips drehen die Hüfte mit (z. B. nach `Dance_Loop`): Wenn eine Figur trotz `ry` falsch herum steht, die Becken-Richtung messen und nachdrehen (Beispiel in `folge01.html`, Tanzgruppe).
+- Im Hochformat wirken Gesprächspartner schnell zu nah: Abstand in der Ego-Perspektive mindestens 1,5–2 m, Bildwinkel 60–64.
+- Testbilder an vielen Zeitpunkten auf einmal: `node shots.js "seite.html?…" präfix t1,t2,… 0.5` und `python3 sheet.py bogen.png präfix_*.png`.
 - Ein Standbild in doppelter Auflösung dauert 30–60 s. Tests deshalb mit Faktor 0,5 und `dof=0`.
