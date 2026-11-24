@@ -1,7 +1,7 @@
 # Folge 1 – „Wenn du nicht eingeladen bist, geh nicht hin.“ (50 s, Ego-Perspektive)
 
 > Stand 23.11.2026. Hook und Ablauf mit dem Nutzer festgelegt. Story-Ende und einheitliche Endkarte vom Nutzer bestätigt (23.11.).
-> Produktion: 24.11. (Wochenlimit am 23.11. bei 96 %).
+> **Fertig am 24.11.: `folge01.mp4`.** Umgesetzte Zeiten: Gruß 10,6 s, Schnitt ins Haus 13,9 s, Jasmin 21,4 s, Mia 25,6 s, Tanzgruppe 30,9 s, Foto 33,5 s, Flüstern 35,4 s, Leon 37,7 s, Tür zu 42,6 s, Endkarte ab 45 s.
 
 ## Rahmen
 

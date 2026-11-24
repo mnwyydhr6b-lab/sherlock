@@ -1,6 +1,7 @@
 # Übergabe – TikTok-Projekt „Ungeschriebene Regeln“
 
-> Lebendes Dokument. Stand: 23.11.2026. Wird bis zum Start laufend ergänzt.
+> Lebendes Dokument. Stand: 24.11.2026. **Folge 1 ist fertig: `folge01.mp4`** (50 s, Szene `folge01.html`, Bau `./make_folge01.sh`, Ton `mix_f01.py`).
+> Lebendes Dokument (vorher: 23.11.2026). Wird bis zum Start laufend ergänzt.
 > **Wichtigste Änderung am 23.11.:** Die Figuren sind jetzt **Klötzchen-Figuren** (`kit_block.js`) in der unveränderten, detaillierten Spielwelt. Alles dazu steht in `LOOK_BIBEL.md`.
 > Neuer Chat: Diese Datei zuerst komplett lesen, dann **`LOOK_BIBEL.md`** lesen und die Bilder in **`look/`** ansehen. Danach bei **„7. Nächste Schritte“** weitermachen.
 
@@ -239,6 +240,7 @@
 - [x] **Klötzchen-Figuren** (`kit_block.js`): ganze Besetzung, Mimik, 26 Bewegungen, Härtetest (`look/bewegungen.png`), Szenen umgestellt, Video-Vorlage in Ego-Perspektive (23.11.)
 - [x] `LOOK_BIBEL.md`: Regeln und Arbeitsablauf für neue Orte
 - [x] **Handy-Chat (entschieden 23.11.): Variante 1 – Chats erscheinen auf dem Handy in deinen Händen** (Ego-Perspektive). `chatTex()` in `kit_block.js` zeichnet Nachrichten, „Gelesen“ und „schreibt …“; `ph.set(1, 1)` holt das Handy zum Lesen näher, `ph.setScreen()` wechselt den Inhalt, wenn eine Nachricht dazukommt. Beispiel: `chat_test.html`. Details in `LOOK_BIBEL.md`.
+- [x] Folge 1 fertig (`folge01.mp4`, 24.11.)
 - [ ] Optional: Vorrat an fertigen Videos für die erste Woche
 
 ## 7. Nächste Schritte
@@ -247,14 +249,16 @@
 
 | Tag | Folge | Drehorte | Neu zu bauen |
 |---|---|---|---|
-| Mo 23.11. | ⭐ 1 – Nicht eingeladen → nicht hingehen | Jugendzimmer, Straße, Partyhaus innen | **Party-Wohnzimmer** (Leons Story auf dem Handy ist fertig: `povPhoneRig` + `partyStoryTex`) |
-| Di 24.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen | Straße nachts (`party: false`), Fußweg | ggf. dunkler Fußweg/Park |
-| Mi 25.11. | ⭐ 4 – Wer mit dir lästert, lästert auch über dich | Schulhof (Tag) | ggf. Ecke/Flur zum Belauschen |
-| Do 26.11. | ⭐ 9 – Steh nicht daneben | Bushaltestelle, Bus | **Bus innen** |
-| Fr 27.11. | ⭐ 10 – Lach nicht mit, wenn über dich gelacht wird | Schulhof (Tag) | – |
-| Sa 28.11. | Puffer: Nacharbeiten oder eine weitere Folge | – | – |
+| ✅ Di 24.11. | ⭐ 1 – Nicht eingeladen → nicht hingehen | Straße, Vorgarten, Party-Wohnzimmer | fertig: `folge01.mp4`, neues Set `set_wohnzimmer.js` (Verschiebung: wegen Wochenlimit einen Tag später gedreht) |
+| Mi 25.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen | Straße nachts (`party: false`), Fußweg | ggf. dunkler Fußweg/Park |
+| Do 26.11. | ⭐ 4 – Wer mit dir lästert, lästert auch über dich | Schulhof (Tag) | ggf. Ecke/Flur zum Belauschen |
+| Fr 27.11. | ⭐ 9 – Steh nicht daneben | Bushaltestelle, Bus | **Bus innen** |
+| Sa 28.11. | ⭐ 10 – Lach nicht mit, wenn über dich gelacht wird | Schulhof (Tag) | – |
+| (Puffer) | Nacharbeiten, falls nötig | – | – |
 
 **Einheitliche Endkarte (Nutzer 23.11., gilt für jede Folge, ersetzt „Was wäre, wenn …?“):** dunkles Overlay → klein „REGEL NR. X“ → Regel groß in Weiß → gelbe kursive Frage → klein „Folge für Regel Nr. X+1“. In `kit_hud.js` noch umsetzen.
+
+**Vorlage für neue Folgen: `folge01.html`** (gemeinsame Zeitleiste, `?part=` je Drehort, Untertitel-/Stimmen-/Zähler-Listen oben, Blickziele der Ego-Kamera mit `lookDir`, Laufwege mit `route`), Bau-Skript `make_folge01.sh`, Ton `mix_f01.py`, Stimmen `audio/tts_f01.py` (Jasmin: Lola `JudZUClAOU1jP3wA2eDG`, Mia: Laura `krYs4UGlOJ9RA8enVbqQ`). Rendern dauerte für 50 s ca. 1 h.
 
 **Ablauf pro Folge**
 1. **Mit dem Nutzer** Hook und Aufbau festlegen. Kurz vorschlagen, Nutzer entscheidet.
