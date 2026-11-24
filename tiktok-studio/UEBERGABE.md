@@ -262,6 +262,21 @@
 
 **Vorlage für neue Folgen: `folge01.html`** (gemeinsame Zeitleiste, `?part=` je Drehort, Untertitel-/Stimmen-/Zähler-Listen oben, Blickziele der Ego-Kamera mit `lookDir`, Laufwege mit `route`), Bau-Skript `make_folge01.sh`, Ton `mix_f01.py`, Stimmen `audio/tts_f01.py` (Jasmin: Lola `JudZUClAOU1jP3wA2eDG`, Mia: Laura `krYs4UGlOJ9RA8enVbqQ`). Rendern dauerte für 50 s ca. 1 h.
 
+**Erzähl-Schema ab Folge 3 (entschieden 24.11., aus der Analyse des „9 Schüsse“-Videos; Folge 1 bleibt wie sie ist)**
+
+| Sek. | Abschnitt | Umsetzung |
+|---|---|---|
+| 0–4 | Hook | Situation sofort im ersten Bild. Große weiße Frage „Was wäre, wenn …?“ oben (2–3 s) **und** Du spricht seinen Gedanken aus (wie „Eine Party? Ohne mich?“). |
+| 4–12 | Setup | Du gerät in die Situation, erster Fehler, Zähler fällt. |
+| 12–23 | Eskalation | Es wird schlimmer, jede Szene wirft eine neue Frage auf. |
+| 23–33 | Erkenntnis | Emotionaler Moment (wie das Gruppenfoto ohne ihn). |
+| 33–43 | Entscheidung | **Du entscheidet selbst** (aktiv, nicht passiv). Gefühle wechseln: Bei einer guten Entscheidung steigt der Zähler wieder ein Stück. |
+| 43–50 | Endkarte | Regel + gelbe Frage; die Hook-Frage vom Anfang kommt wieder (Ende verbindet sich mit dem Anfang). |
+
+- Kein langer Erzähltext: kurze Dialoge und kurze Untertitel, man soll es ohne Lesen verstehen.
+- Zähler + Ort/Uhrzeit bleiben das sichtbare Fortschritts-Element.
+- Ab CRP (61–70 s) die Abschnitte strecken.
+
 **Ablauf pro Folge**
 1. **Mit dem Nutzer** Hook und Aufbau festlegen. Kurz vorschlagen, Nutzer entscheidet.
    - Rahmen: 50 s, Zähler „Selbstrespekt“, Endkarte „Was wäre, wenn …?“ und gelbe Frage
