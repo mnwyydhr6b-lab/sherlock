@@ -41,7 +41,7 @@ const FACES = {
   shocked:  { brow: [0.25, 0.1], eye: 1.3, mouth: 'big_o' },
   cool:     { brow: [-0.03, -0.22], eye: 1, lid: 0.42, mouth: 'smirk' }, // lässig/souverän: halb geschlossene Lider, Grinsen (Profilbild „Aura“)
 };
-function drawFace(spec, name, { blink = 0, talk = 0, look = null, blush = 0 } = {}) {
+export function drawFace(spec, name, { blink = 0, talk = 0, look = null, blush = 0 } = {}) {
   const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
   const F = FACES[name] || FACES.neutral; const lk = look || F.look || [0, 0];
   const ink = '#2a1d18', ex = 0.2 * S, ey = 0.44 * S, er = 0.085 * S;

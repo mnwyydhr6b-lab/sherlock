@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1920px;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Folge 10 (gepostet als Regel Nr. 2) – „Lach nicht mit, wenn über dich gelacht wird.“ (50 s, Ego-Perspektive, Schulhof bei Tag)
+// Erzähl-Schema: Hook (Rucksack reißt, alle lachen) – Setup (Opa-Hoodie) – Eskalation (Lena, Jasmin filmt) – Erkenntnis (Story) – Entscheidung (Du hört auf) – Endkarte.
+// Rendern: ./make_folge10.sh
+import * as THREE from 'three';
+import { createStage } from './kit_look.js';
+import { buildSchule, SCHANCHOR } from './set_schule.js';
+import { loadHumanAssets, holdCup, faceTo, lookAt } from './kit_cast.js';
+import { spawnBlock, loadBlockMoves, prepMoves, syncPhone, povHide, povPose, povPhoneRig, drawFace, BLOCK_CAST } from './kit_block.js';
+import { Actor, clipSpeed, smooth, blinkAt, lipAt } from './kit_anim.js';
+import { createHUD, counterAt } from './kit_hud.js';
+import { rbox, std } from './kit_world.js';
+
+const Q = new URLSearchParams(location.search);
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const HOOK = 'Was wäre, wenn du mitlachst, obwohl sie über dich lachen?';
+const COUNTER = [[0, 100], [10.5, 85], [17.0, 70], [22.6, 55], [28.0, 30], [40.0, 50]];
+const SUBS = [
+  [2.5, 4.6, '„Ha … ja … voll lustig.“'],
+  [7.15, 9.0, '„Ey, hast du den Hoodie von deinem Opa?“'], [10.1, 12.0, '„Haha … ja klar, safe.“'],
+  [12.75, 15.9, '„Erzähl mal, wie Lena dich gestern hat abblitzen lassen!“'], [16.2, 19.6, '„Hahaha! Ja … war schon peinlich.“'], [20.4, 22.5, '„Warte, nochmal! Ich film!“'],
+  [26.6, 30.0, 'Sie lachen nicht mit dir. Sie lachen über dich.'],
+  [33.1, 35.8, '„Nee. … Das ist nicht witzig.“'], [36.45, 38.5, '„Chill … war nur Spaß.“'], [39.0, 40.6, '„Für dich vielleicht.“'], [41.6, 43.2, '„… er hat recht.“'],
+];
+const VOICE = { hook: 1.6, opa: 7.0, safe: 9.2, lena: 12.6, peinlich: 16.0, film: 19.7, nee: 33.0, chill: 36.4, fuerdich: 38.9, recht: 41.6 }; // Startzeiten der Tondateien (= mix_f10.py)
+const ENV = {}; async function loadEnv() { const f = { hook: 'f10_du_hook', opa: 'f10_tarik_opa', safe: 'f10_du_safe', lena: 'f10_tarik_lena', peinlich: 'f10_du_peinlich', film: 'f10_jasmin_film', nee: 'f10_du_nee', chill: 'f10_tarik_chill', fuerdich: 'f10_du_fuerdich', recht: 'f10_mia_recht' };
+  for (const [k, n] of Object.entries(f)) ENV[k] = await (await fetch(`audio/${n}.env.json`)).json(); }
+const lip = (t, k) => lipAt(t, ENV[k], VOICE[k], 0.85);
+const LAUGH = [[0.9, 4.2], [8.85, 11.0], [15.55, 18.6], [22.2, 24.2]]; // Gelächter der Clique
+const laughing = (t, d = 0) => LAUGH.some(([a, b]) => t > a + d && t < b + d);
+function lookDir(t, st, segs) { const dirOf = (s) => s.p ? s.p().clone().sub(st.eye).normalize() : s.pitch != null ? V3(st.dir.x, 0, st.dir.z).normalize().setY(Math.sin(s.pitch)).normalize() : st.dir.clone();
+  let i = 0; for (let k = 0; k < segs.length; k++) if (segs[k].t <= t) i = k; const cur = segs[i], prev = segs[i - 1]; if (!prev || t < cur.t) return dirOf(cur);
+  return dirOf(prev).lerp(dirOf(cur), smooth((t - cur.t) / (cur.d ?? 0.7))).normalize(); }
+function route(pts, t0, speed) { const keys = [[t0, pts[0][0], pts[0][1]]]; let t = t0; for (let i = 1; i < pts.length; i++) { t += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) / speed; keys.push([t, pts[i][0], pts[i][1]]); } return keys; }
+const headOf = (h, up = 0.16) => () => { h.updateMatrixWorld(true); return h.userData.bones.Head.getWorldPosition(new THREE.Vector3()).add(V3(0, up, 0)); };
+const angTo = (a, b) => Math.atan2(b[0] - a[0], b[1] - a[1]);
+const EXTRA = {
+  limeGirl: ['mia', { shirt: 0xa8d84a, pants: 0x2b2b33, hair: 0x6a3a1a, hairStyle: 'long', top: 'tee', skin: 0xd8a07a }],
+  greyGuy: ['ben', { shirt: 0x8a8f98, pants: 0x24345a, hair: 0x3a2a1a, hairStyle: 'short', top: 'hoodie', skin: 0xf2c9a6 }],
+  navyGuy: ['ben', { shirt: 0x2a3a6a, pants: 0x5a5a5a, hair: 0xd8b064, hairStyle: 'buzz', top: 'jacket', shirt2: 0xd8d8d8, skin: 0xf0c4a0 }],
+  orangeGirl: ['mia', { shirt: 0xf08a3a, pants: 0x4a6fae, hair: 0xe8c890, hairStyle: 'long', top: 'jacket', shirt2: 0xffffff, skin: 0xf3cfb0 }],
+};
+const extra = (k, o = {}) => spawnBlock(EXTRA[k][0], { ...o, spec: EXTRA[k][1] });
+
+// Jasmins Story auf deinem Handy: du selbst, lachend – „der checkt’s nicht mal“
+function storyTex() {
+  const W = 330, H = 710, K = 2, c = document.createElement('canvas'); c.width = W * K; c.height = H * K; const g = c.getContext('2d'); g.scale(K, K);
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#7fb2e8'); bg.addColorStop(0.45, '#cfe2f2'); bg.addColorStop(0.46, '#a9a49a'); bg.addColorStop(1, '#8a857c'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(0,0,0,0.12)'; for (let y = 340; y < H; y += 26) g.fillRect(0, y, W, 2); // Schulhof-Pflaster
+  const s = BLOCK_CAST.du; const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+  g.fillStyle = hex(s.shirt); g.fillRect(70, 420, 190, 300); g.fillStyle = hex(s.skin); g.fillRect(140, 380, 50, 50); // Oberkörper + Hals
+  const face = drawFace(s, 'laugh', { talk: 1 }).image; g.fillStyle = hex(s.skin); g.fillRect(85, 210, 160, 160); g.drawImage(face, 85, 210, 160, 160);
+  g.fillStyle = hex(s.hair); g.fillRect(80, 196, 170, 34); // Haare
+  g.fillStyle = 'rgba(255,255,255,0.9)'; for (let i = 0; i < 3; i++) g.fillRect(14 + i * 103, 14, 97, 4); g.fillStyle = 'rgba(255,255,255,0.45)'; g.fillRect(14, 14, 60, 4);
+  g.fillStyle = '#e85aa8'; g.beginPath(); g.arc(36, 46, 16, 0, 6.29); g.fill(); g.fillStyle = '#fff'; g.font = '700 17px Inter, sans-serif'; g.textBaseline = 'middle'; g.fillText('jasmin.k', 60, 46); g.fillStyle = 'rgba(255,255,255,0.75)'; g.font = '500 14px Inter, sans-serif'; g.fillText('1 Min.', 140, 46);
+  // Text-Aufkleber mit gezeichnetem Lach-Smiley
+  g.save(); g.translate(165, 140); g.rotate(-0.05); g.fillStyle = 'rgba(0,0,0,0.75)'; const tw = 300; g.beginPath(); g.roundRect(-tw / 2, -30, tw, 60, 14); g.fill();
+  g.fillStyle = '#fff'; g.font = '800 20px Inter, sans-serif'; g.textAlign = 'center'; g.fillText('der checkt’s nicht mal', 18, 1);
+  g.translate(-14, 0); g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(-112, 0, 15, 0, 6.29); g.fill(); g.strokeStyle = '#5a3a00'; g.lineWidth = 2.2; g.beginPath(); g.arc(-117, -3, 3.5, Math.PI, 0); g.stroke(); g.beginPath(); g.arc(-107, -3, 3.5, Math.PI, 0); g.stroke();
+  g.fillStyle = '#5a2a10'; g.beginPath(); g.arc(-112, 3, 7, 0, Math.PI); g.fill(); g.fillStyle = '#4ab8ff'; g.fillRect(-129, -2, 4, 9); g.fillRect(-99, -2, 4, 9); g.restore();
+  g.fillStyle = 'rgba(255,255,255,0.18)'; g.beginPath(); g.roundRect(20, 640, 290, 46, 23); g.fill(); g.fillStyle = 'rgba(255,255,255,0.8)'; g.font = '18px Inter, sans-serif'; g.textAlign = 'center'; g.fillText('Antworten …', 165, 664);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+// Sachen aus dem Rucksack: Bücher, Mäppchen, Brotdose, Flasche – fallen vor dir auf den Boden
+function makeSpill(scene, du, ry) {
+  const items = []; const fw = V3(Math.sin(ry), 0, Math.cos(ry)), rt = V3(fw.z, 0, -fw.x);
+  const mk = (geo, mat, off, side, rot) => { const m = new THREE.Mesh(geo, mat); m.castShadow = m.receiveShadow = true; scene.add(m); items.push({ m, off, side, rot }); return m; };
+  mk(rbox(0.21, 0.025, 0.29, 0.006), std(0x2f6fbf, 0.6), 0.55, -0.12, 0.4); mk(rbox(0.2, 0.03, 0.27, 0.006), std(0xd8a02a, 0.6), 0.72, 0.18, -0.9);
+  mk(rbox(0.21, 0.012, 0.29, 0.004), std(0xf2f0ea, 0.7), 0.42, 0.25, 1.2); mk(rbox(0.22, 0.06, 0.08, 0.025), std(0xc0302a, 0.7), 0.62, 0.02, 2.0);
+  mk(rbox(0.17, 0.06, 0.12, 0.02), std(0x5ab86a, 0.4), 0.88, -0.2, 0.6); const b = mk(new THREE.CylinderGeometry(0.035, 0.035, 0.22, 16), std(0x4ab8e8, 0.25, 0.2, { transparent: true, opacity: 0.9 }), 0.5, 0.42, 1.6);
+  for (let i = 0; i < 5; i++) mk(rbox(0.012, 0.012, 0.14, 0.004), std([0xf2c42a, 0x2a8ad8, 0xd83a3a, 0x3aa85a, 0x8a4ad8][i], 0.5), 0.6 + i * 0.07, -0.3 + i * 0.13, i * 1.3);
+  items.forEach((it, i) => { it.t0 = 0.22 + i * 0.045; it.end = du.position.clone().addScaledVector(fw, it.off + 0.3).addScaledVector(rt, it.side); it.start = du.position.clone().addScaledVector(fw, 0.28).addScaledVector(rt, it.side * 0.3).setY(1.05);
+    it.bottle = it.m === b; });
+  return (t) => items.forEach((it, i) => { const k = Math.max(0, t - it.t0), T = 0.42; const h = it.bottle ? 0.035 : 0.02;
+    if (t < it.t0) { it.m.visible = false; return; } it.m.visible = true;
+    const f = Math.min(1, k / T); const p = it.start.clone().lerp(it.end, f); p.y = THREE.MathUtils.lerp(it.start.y, h, f * f); if (k > T) { const b2 = Math.max(0, Math.sin((k - T) * 18) * Math.exp(-(k - T) * 9) * 0.05); p.y = h + b2; }
+    it.m.position.copy(p); it.m.rotation.set(it.bottle ? Math.PI / 2 : 0, it.rot + f * 2.0, (1 - f) * 1.4 * (i % 2 ? 1 : -1)); });
+}
+
+const stage = createStage({ preset: 'tag', shadowExtent: 30 });
+const { scene } = stage;
+async function main() {
+  await loadEnv();
+  const hud = await createHUD(); hud.loc('SCHULHOF · 10:24');
+  await buildSchule(stage, {});
+  await loadHumanAssets(); await loadBlockMoves();
+  // ---- Clique vor der Tischtennisplatte (Tarik in der Mitte), Du kommt von Süden
+  const G = [0.0, -4.3], D0 = [0.85, -0.2], D1 = [0.35, -2.25];
+  const tarik = spawnBlock('tarik', { x: 0.05, y: 0, z: -4.75 }), leon = spawnBlock('leon', { x: -0.95, y: 0, z: -4.4 }), ben = spawnBlock('ben', { x: 0.95, y: 0, z: -4.45 });
+  const jas = spawnBlock('jasmin', { x: -0.55, y: 0, z: -5.25 }), mia = spawnBlock('mia', { x: 1.25, y: 0, z: -3.75 });
+  const clique = [tarik, leon, ben, jas, mia]; clique.forEach(h => { scene.add(h); faceTo(h, V3(D1[0], 0, D1[1])); });
+  const moves = ['Laugh', 'Laugh hard', 'Point', 'Talk with gestures', 'Texting', 'Talk']; clique.forEach(h => prepMoves(h, moves));
+  const seg = (anim, at, o = {}) => ({ anim, at, fade: 0.3, ...o });
+  const tA = new Actor(tarik, { segs: [seg('Idle_Loop', 0), seg('Ara:Point', 0.75, { fade: 0.2 }), seg('Ara:Laugh hard', 2.6), seg('Idle_Loop', 4.4), seg('Ara:Talk with gestures', 6.9), seg('Ara:Laugh hard', 8.85),
+    seg('Idle_Loop', 11.0), seg('Ara:Talk with gestures', 12.5), seg('Ara:Laugh hard', 15.55), seg('Idle_Loop', 18.6), seg('Ara:Laugh', 22.2), seg('Idle_Loop', 24.2), seg('Idle_FoldArms_Loop', 34.0, { fade: 0.6 }), seg('Ara:Talk', 36.35), seg('Idle_Loop', 38.4, { fade: 0.6 })] });
+  const lA = new Actor(leon, { segs: [seg('Idle_Loop', 0, { offset: 0.5 }), seg('Ara:Laugh', 0.95, { offset: 0.4 }), seg('Idle_Loop', 4.2), seg('Ara:Laugh hard', 8.95, { offset: 0.3 }), seg('Idle_Loop', 11.0), seg('Ara:Laugh hard', 15.65), seg('Idle_Loop', 18.5), seg('Ara:Laugh', 22.3), seg('Idle_Loop', 24.2)] });
+  const bA = new Actor(ben, { segs: [seg('Idle_Loop', 0, { offset: 1.1 }), seg('Ara:Laugh hard', 1.0, { offset: 0.7 }), seg('Idle_Loop', 4.1), seg('Ara:Laugh', 8.9, { offset: 0.2 }), seg('Idle_Loop', 10.9), seg('Ara:Laugh', 15.6, { offset: 0.5 }), seg('Idle_Loop', 18.4), seg('Ara:Laugh hard', 22.25), seg('Idle_Loop', 24.0)] });
+  const jA = new Actor(jas, { segs: [seg('Idle_Loop', 0, { offset: 0.3 }), seg('Ara:Laugh', 1.0, { offset: 0.9 }), seg('Idle_Loop', 4.0), seg('Ara:Laugh', 8.95), seg('Idle_Loop', 10.8), seg('Ara:Laugh', 15.6, { offset: 0.6 }), seg('Ara:Texting', 18.3, { fade: 0.5 }), seg('Idle_Loop', 30.5, { fade: 0.5 })] });
+  const mA = new Actor(mia, { segs: [seg('Idle_Loop', 0, { offset: 0.8 }), seg('Ara:Talk', 41.5, { fade: 0.4 }), seg('Idle_Loop', 43.0, { fade: 0.5 })] });
+  // Hintergrund: Mitschüler auf dem Schulhof
+  const bg = [extra('limeGirl', { x: -7.2, y: 0, z: -6.2 }), extra('greyGuy', { x: -6.4, y: 0, z: -7.4 }), extra('navyGuy', { x: 6.0, y: 0, z: -10.5 }), extra('orangeGirl', { x: 6.9, y: 0, z: -11.2 })];
+  bg.forEach(h => scene.add(h)); faceTo(bg[0], bg[1].position); faceTo(bg[1], bg[0].position); faceTo(bg[2], bg[3].position); faceTo(bg[3], bg[2].position);
+  const bgA = bg.map((h, i) => new Actor(h, { segs: [seg(i % 2 ? 'Idle_Talking_Loop' : 'Idle_Loop', 0, { offset: i * 0.7 })] }));
+  // ---- Du
+  const du = spawnBlock('du', { anim: 'Idle_Loop', x: D0[0], y: 0, z: D0[1], ry: angTo(D0, G) }); scene.add(du); povHide(du);
+  const phone = povPhoneRig(stage, du, { screen: storyTex() });
+  const v = clipSpeed(du, 'Walk_Loop');
+  const spill = makeSpill(scene, du, angTo(D0, G));
+  const pIn = route([D0, D1], 4.7, 1.0), pOut = route([D1, [0.6, -0.9], [0.9, 1.6]], 40.95, 1.15);
+  const ryG = angTo(D1, G), ryAway = angTo(D1, [0.6, -0.9]);
+  const duA = new Actor(du, { segs: [seg('Idle_Loop', 0), seg('Walk_Loop', 4.65, { speed: 1.0 / v, fade: 0.35 }), seg('Idle_Loop', pIn[1][0] - 0.15, { fade: 0.45 }), seg('Walk_Loop', 40.9, { speed: 1.15 / v, fade: 0.35 })],
+    path: [...pIn, ...pOut], ry: [[0, angTo(D0, G)], [4.7, angTo(D0, G)], [5.2, ryG], [40.55, ryG], [41.25, ryAway]] });
+  const actors = [duA, tA, lA, bA, jA, mA, ...bgA];
+  stage.build({ focus: V3(0, 1.5, -4.3), aperture: 0.0007 }); stage.limitLights(V3(0, 1.5, -3), 8);
+  // ---- Blickziele der Ego-Kamera
+  const F = (h) => headOf(h, 0.14), grp = () => F(tarik)().lerp(F(leon)(), 0.3).lerp(F(ben)(), 0.25);
+  const look = [{ t: 0, pitch: -0.85 }, { t: 1.25, d: 0.55, p: grp }, { t: 2.4, d: 0.8, p: F(tarik) }, { t: 4.6, d: 0.6, p: grp }, { t: 6.8, d: 0.5, p: F(tarik) }, { t: 9.1, d: 0.7, p: grp }, { t: 11.0, d: 0.6, p: F(mia) },
+    { t: 12.4, d: 0.5, p: F(tarik) }, { t: 15.8, d: 0.6, p: grp }, { t: 18.4, d: 0.6, p: F(jas) }, { t: 22.3, d: 0.6, p: grp }, { t: 30.6, d: 0.7, p: grp }, { t: 32.7, d: 0.6, p: F(tarik) },
+    { t: 40.6, d: 0.7 }, { t: 41.45, d: 0.6, p: F(mia) }, { t: 43.3, d: 0.7 }];
+  const P = stage.P;
+  window.renderFrame = (t) => {
+    for (const a of actors) a.update(t); clique.forEach(syncPhone); spill(t); du.visible = t > 1.5; // beim Blick nach unten im Hook keinen eigenen Arm im Bild
+    const duH = headOf(du, 0.12)();
+    // Köpfe: alle schauen Du an (beim Lachen etwas weniger), Jasmin beim Filmen aufs Handy, Mia am Ende Du hinterher
+    const kLook = (h, k) => { if (k > 0.01) lookAt(h, duH, k); };
+    kLook(tarik, t > 18.6 && t < 32.5 ? 0.45 : 0.85); kLook(leon, laughing(t) ? 0.5 : 0.8); kLook(ben, laughing(t) ? 0.4 : 0.75);
+    if (!(t > 18.6 && t < 30.4)) kLook(jas, 0.75); kLook(mia, t > 40.5 ? 0.95 : 0.7);
+    // Gesichter
+    const after = t > 33.3, hl = (k) => Math.max(0, Math.sin(t * k)) * 0.8;
+    tarik.userData.blockFace.set(after ? (t > 36.3 && t < 38.5 ? 'awkward' : 'neutral') : laughing(t) ? 'laugh' : 'smirk', { blink: blinkAt(t, 3), talk: Math.max(lip(t, 'opa'), lip(t, 'lena'), lip(t, 'chill'), laughing(t) ? hl(10) : 0) });
+    leon.userData.blockFace.set(after ? 'awkward' : laughing(t) ? 'laugh' : 'smirk', { blink: blinkAt(t, 4), talk: laughing(t) && !after ? hl(9) : 0 });
+    ben.userData.blockFace.set(after ? 'surprised' : laughing(t) ? 'laugh' : 'happy', { blink: blinkAt(t, 5), talk: laughing(t) && !after ? hl(11) : 0 });
+    jas.userData.blockFace.set(after ? 'awkward' : laughing(t) || (t > 19.6 && t < 22.5) ? 'laugh' : 'smirk', { blink: blinkAt(t, 6), talk: Math.max(lip(t, 'film'), laughing(t) && !after ? hl(8) : 0) });
+    mia.userData.blockFace.set(t > 40.0 ? 'sad' : after ? 'sad' : laughing(t) ? 'happy' : 'awkward', { blink: blinkAt(t, 7), talk: lip(t, 'recht') });
+    bg.forEach((h, i) => h.userData.blockFace.set(i % 2 ? 'happy' : 'neutral', { blink: blinkAt(t, 12 + i), talk: i % 2 ? hl(7 + i) * 0.6 : 0 }));
+    // Ego-Kamera + Handy (Jasmins Story)
+    const walking = (t > 4.7 && t < pIn[1][0]) || t > 40.95;
+    const st = povPose(du, { steady: true, pitch: -0.05, bob: walking ? 0.012 : 0, t });
+    const kPh = smooth((t - 24.6) / 0.55) * (1 - smooth((t - 30.0) / 0.55)); phone.set(kPh, smooth((t - 25.3) / 0.6));
+    const dir = lookDir(t, st, look); dir.y -= 0.1 * kPh; dir.normalize();
+    const cam = stage.camera; cam.position.copy(st.eye); cam.lookAt(st.eye.clone().add(dir)); cam.fov = 62; cam.near = 0.03; cam.updateProjectionMatrix();
+    const tg = [...look].reverse().find(s => s.t <= t); stage.setFocus(kPh > 0.5 ? st.eye.clone().addScaledVector(dir, 0.3) : tg && tg.p ? tg.p() : st.eye.clone().addScaledVector(dir, t < 1.2 ? 1.0 : 3));
+    // HUD
+    const c = counterAt(t, COUNTER); hud.counter(c.v, c.fl, c.up); hud.hud(1);
+    stage.grade.uniforms.sat.value = 0.4 + (P.sat - 0.4) * Math.max(0, (c.v - 5) / 95);
+    hud.hook(HOOK, smooth((t - 0.1) / 0.35) * (1 - smooth((t - 3.3) / 0.4)));
+    let so = 0, txt = ''; for (const [a, b, s] of SUBS) { const k = Math.min(smooth((t - a) / 0.2), 1 - smooth((t - b + 0.2) / 0.2)); if (k > so) { so = k; txt = s; } }
+    hud.subTop(kPh > 0.3 ? 560 : 1238); hud.sub(txt, so);
+    hud.endCard(t - 44.0, { nr: 2, rule: 'Lach nicht mit, wenn über dich gelacht wird.', question: 'Hättest du mitgelacht?', hook: HOOK });
+    stage.render();
+  };
+  window.renderStill = () => { window.renderFrame(parseFloat(Q.get('t') || '1')); return true; };
+  window.clipLength = 50; window.ready = true;
+}
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>
