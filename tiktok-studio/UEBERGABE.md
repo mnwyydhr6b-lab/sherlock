@@ -252,15 +252,17 @@
 | Tag | Folge | Drehorte | Neu zu bauen |
 |---|---|---|---|
 | ✅ Di 24.11. | ⭐ 1 – Nicht eingeladen → nicht hingehen | Straße, Vorgarten, Party-Wohnzimmer | fertig: `folge01.mp4`, neues Set `set_wohnzimmer.js` (Verschiebung: wegen Wochenlimit einen Tag später gedreht) |
-| Mi 25.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen | Straße nachts (`party: false`), Fußweg | ggf. dunkler Fußweg/Park |
-| Do 26.11. | ⭐ 4 – Wer mit dir lästert, lästert auch über dich | Schulhof (Tag) | ggf. Ecke/Flur zum Belauschen |
-| Fr 27.11. | ⭐ 9 – Steh nicht daneben | Bushaltestelle, Bus | **Bus innen** |
-| Sa 28.11. | ⭐ 10 – Lach nicht mit, wenn über dich gelacht wird | Schulhof (Tag) | – |
+| ✅ Mi 25.11. | ⭐ 10 – Lach nicht mit, wenn über dich gelacht wird (vorgezogen, gepostet als **Regel Nr. 2**) | Schulhof (Tag) | `folge10.mp4`, Skript `skripte/folge10_lachen.md` |
+| Do 26.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen | Straße nachts (`party: false`), Fußweg | ggf. dunkler Fußweg/Park |
+| Fr 27.11. | ⭐ 4 – Wer mit dir lästert, lästert auch über dich | Schulhof (Tag) | ggf. Ecke/Flur zum Belauschen |
+| Sa 28.11. | ⭐ 9 – Steh nicht daneben | Bushaltestelle, Bus | **Bus innen** |
 | (Puffer) | Nacharbeiten, falls nötig | – | – |
 
 **Einheitliche Endkarte (Nutzer 23.11., gilt für jede Folge, ersetzt „Was wäre, wenn …?“):** dunkles Overlay → klein „REGEL NR. X“ → Regel groß in Weiß → gelbe kursive Frage → klein „Folge für Regel Nr. X+1“. In `kit_hud.js` noch umsetzen.
 
 **Vorlage für neue Folgen: `folge01.html`** (gemeinsame Zeitleiste, `?part=` je Drehort, Untertitel-/Stimmen-/Zähler-Listen oben, Blickziele der Ego-Kamera mit `lookDir`, Laufwege mit `route`), Bau-Skript `make_folge01.sh`, Ton `mix_f01.py`, Stimmen `audio/tts_f01.py` (Jasmin: Lola `JudZUClAOU1jP3wA2eDG`, Mia: Laura `krYs4UGlOJ9RA8enVbqQ`). Rendern dauerte für 50 s ca. 1 h.
+
+**Regel-Nummern auf der Endkarte = Reihenfolge beim Posten** (Folge 1 = Regel Nr. 1, Folge 10 = Regel Nr. 2, die nächste = Nr. 3).
 
 **Erzähl-Schema ab Folge 3 (entschieden 24.11., aus der Analyse des „9 Schüsse“-Videos; Folge 1 bleibt wie sie ist)**
 
