@@ -1,0 +1,210 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}#wrap{position:relative;width:1080px;height:1920px;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// Folge 3 (gepostet als Regel Nr. 3) – „Lass niemanden allein nach Hause gehen.“ (ca. 46,5 s, Ego-Perspektive, Lindenweg nachts)
+// Erzähl-Schema: Hook (Mia geht allein) – Setup (Leon: noch 'ne Runde) – Eskalation (Chat: da läuft einer hinter mir) – Erkenntnis (Mailbox)
+//                – Entscheidung (Du rennt los, findet sie unter der Laterne, der Typ geht) – Endkarte.
+// Drei Einstellungen auf einer Zeitleiste:
+//   A  0 – CUT1     : vor dem Tor (23:41), Mia geht, Leon ruft
+//   B  CUT1 – CUT2  : Vorgarten kurz später (23:43), Handy, Mailbox, Du rennt los
+//   C  CUT2 – Ende  : weiter unten im Lindenweg (verdeckter Schnitt, während Du aufs Handy schaut), Laterne, Mia, der Typ
+// Rendern: ./make_folge03.sh  (?seg=a: 0–CUT2, ?seg=b: CUT2–Ende; nur Lichtauswahl unterscheidet sich)
+import * as THREE from 'three';
+import { createStage, PRESETS } from './kit_look.js';
+import { buildStrasse, SW } from './set_strasse.js';
+import { makeStreetLamp } from './kit_street.js';
+import { loadHumanAssets, holdCup, faceTo, lookAt } from './kit_cast.js';
+import { spawnBlock, loadBlockMoves, prepMoves, syncPhone, povHide, povPose, povPhoneRig, chatTex, BLOCK_CAST } from './kit_block.js';
+import { Actor, clipSpeed, smooth, blinkAt, lipAt } from './kit_anim.js';
+import { createHUD, counterAt } from './kit_hud.js';
+
+const Q = new URLSearchParams(location.search);
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const CUT1 = 7.9, CUT2 = 714 / 24, RUN = 27.4, END = 40.4, LEN = 46.5; // CUT2 liegt genau auf einem Frame (Grenze der beiden Render-Abschnitte)
+const HOOK = 'Was wäre, wenn du sie allein gehen lässt?';
+const COUNTER = [[0, 100], [6.9, 85], [16.7, 70], [24.5, 50], [26.9, 30], [28.3, 40], [35.7, 60]];
+const SUBS = [
+  [0.4, 2.45, '„Ich geh dann! Ist ja nicht weit!“'], [2.6, 5.0, '„Wird schon gehen … oder?“'], [5.2, 7.0, '„Ey, komm! Noch ’ne Runde!“'],
+  [9.65, 12.4, '„Was? … Da läuft einer hinter ihr?“'], [12.7, 14.5, '„Die übertreibt doch. Chill.“'], [14.95, 16.75, '„… ja. Bestimmt.“'],
+  [21.7, 24.4, '„Hey, hier ist Mia! Sprich mir einfach drauf!“'], [25.4, 26.95, '„Ich hätte mitgehen sollen.“'], [28.0, 29.4, '„Ey! Wo willst du hin?“'],
+  [30.45, 31.3, '„… Hallo?“'], [31.95, 34.2, '„Bleib, wo du bist! Ich bin gleich da!“'], [35.35, 38.0, '„Danke … dass du gekommen bist.“'], [38.25, 40.1, '„Komm. Ich bring dich heim.“'],
+];
+const VOICE = { geh: 0.25, hook: 2.3, runde: 5.1, was: 9.5, chill: 12.6, bestimmt: 14.6, mailbox: 21.6, mitgehen: 25.2, wohin: 27.9, hallo: 30.3, bleib: 31.7, danke: 35.3, heim: 38.2 }; // = mix_f03.py
+const ENV = {}; async function loadEnv() { const f = { geh: 'f03_mia_geh', runde: 'f03_leon_runde', chill: 'f03_leon_chill', wohin: 'f03_leon_wohin', hallo: 'f03_mia_hallo', danke: 'f03_mia_danke' };
+  for (const [k, n] of Object.entries(f)) ENV[k] = await (await fetch(`audio/${n}.env.json`)).json(); }
+const lip = (t, k) => lipAt(t, ENV[k], VOICE[k], 0.85);
+function lookDir(t, st, segs) { const dirOf = (s) => s.p ? s.p().clone().sub(st.eye).normalize() : s.pitch != null ? V3(st.dir.x, 0, st.dir.z).normalize().setY(Math.sin(s.pitch)).normalize() : st.dir.clone();
+  let i = 0; for (let k = 0; k < segs.length; k++) if (segs[k].t <= t) i = k; const cur = segs[i], prev = segs[i - 1]; if (!prev || t < cur.t) return dirOf(cur);
+  return dirOf(prev).lerp(dirOf(cur), smooth((t - cur.t) / (cur.d ?? 0.7))).normalize(); }
+function route(pts, t0, speed) { const keys = [[t0, pts[0][0], pts[0][1]]]; let t = t0; for (let i = 1; i < pts.length; i++) { t += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) / speed; keys.push([t, pts[i][0], pts[i][1]]); } return keys; }
+const ryOf = (keys, lead = 0.05) => keys.slice(1).map((k, i) => [keys[i][0] + lead, Math.atan2(k[1] - keys[i][1], k[2] - keys[i][2])]); // Blickrichtung entlang eines Wegs
+const headOf = (h, up = 0.16) => () => { h.updateMatrixWorld(true); return h.userData.bones.Head.getWorldPosition(new THREE.Vector3()).add(V3(0, up, 0)); };
+const angTo = (a, b) => Math.atan2(b[0] - a[0], b[1] - a[1]);
+const EXTRA = {
+  tealGirl: ['mia', { shirt: 0x3ac0b0, pants: 0x2b2b33, hair: 0x2a1a12, hairStyle: 'bun', top: 'tee', skin: 0xe8b890 }],
+  creep: ['ben', { shirt: 0x1d1f25, pants: 0x26282d, hair: 0x141414, hairStyle: 'buzz', top: 'hoodie', hood: true, shoes: 0x2b2b30, skin: 0xe2b48e, eyes: 0x2a2a2a }],
+};
+const extra = (k, o = {}) => spawnBlock(EXTRA[k][0], { ...o, spec: EXTRA[k][1] });
+
+// Anruf-Bildschirm (Messenger-Anruf, dunkel)
+function callTex(status, { sub = '' } = {}) {
+  const K = 2, W = 330, H = 710, c = document.createElement('canvas'); c.width = W * K; c.height = H * K; const g = c.getContext('2d'); g.scale(K, K);
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#1c2433'); bg.addColorStop(1, '#0b0e14'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#e8eaf0'; g.font = '600 15px Inter, sans-serif'; g.textBaseline = 'middle'; g.fillText('23:44', 22, 18);
+  g.textAlign = 'center'; g.fillStyle = '#' + new THREE.Color(BLOCK_CAST.mia.hair).getHexString(); g.beginPath(); g.arc(W / 2, 215, 62, 0, 6.29); g.fill();
+  g.fillStyle = '#fff'; g.font = '700 58px Inter, sans-serif'; g.fillText('M', W / 2, 218);
+  g.font = '700 40px Inter, sans-serif'; g.fillText('Mia', W / 2, 330); g.fillStyle = '#aab3c5'; g.font = '600 24px Inter, sans-serif'; g.fillText(status, W / 2, 375);
+  if (sub) { g.fillStyle = '#7d869a'; g.font = '500 18px Inter, sans-serif'; g.fillText(sub, W / 2, 408); }
+  const btn = (x, col, draw) => { g.fillStyle = col; g.beginPath(); g.arc(x, 600, 30, 0, 6.29); g.fill(); g.strokeStyle = '#fff'; g.fillStyle = '#fff'; g.lineWidth = 3; g.lineCap = 'round'; draw(x, 600); };
+  btn(75, 'rgba(255,255,255,0.14)', (x, y) => { g.beginPath(); g.roundRect(x - 6, y - 15, 12, 21, 6); g.stroke(); g.beginPath(); g.arc(x, y + 1, 11, 0.2, Math.PI - 0.2); g.stroke(); g.beginPath(); g.moveTo(x, y + 12); g.lineTo(x, y + 17); g.stroke(); });
+  btn(165, 'rgba(255,255,255,0.14)', (x, y) => { g.beginPath(); g.moveTo(x - 12, y - 5); g.lineTo(x - 5, y - 5); g.lineTo(x + 4, y - 13); g.lineTo(x + 4, y + 13); g.lineTo(x - 5, y + 5); g.lineTo(x - 12, y + 5); g.closePath(); g.fill(); g.beginPath(); g.arc(x + 6, y, 9, -0.8, 0.8); g.stroke(); });
+  btn(255, '#e5484d', (x, y) => { g.save(); g.translate(x, y); g.rotate(2.36); g.beginPath(); g.roundRect(-5, -14, 10, 28, 5); g.fill(); g.fillRect(-9, -15, 18, 7); g.fillRect(-9, 8, 18, 7); g.restore(); });
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+
+const seg = Q.get('seg') || (parseFloat(Q.get('t') || '0') >= CUT2 ? 'b' : 'a');
+// späte Nacht (23:41): wie „nacht“, aber ohne Abendrot am Horizont, dunkler und etwas mehr Dunst -> die Laternen tragen das Licht
+PRESETS.nacht_spaet = { base: 'nacht', sky: [[0, '#03061a'], [0.22, '#0a1030'], [0.36, '#121a44'], [0.45, '#1c2556'], [0.49, '#283062'], [0.505, '#323a6a'], [0.52, '#151626'], [1, '#0e0d14']],
+  clouds: 'rgba(150,160,220,0.07)', fog: [0x141830, 0.016], envBlobs: 0x5a6488, env: 0.45, hemi: [0x4a5cc0, 0x1a1622, 0.24], key: [0x9fb4ff, 0.85, -38, 34, 26], rim: [0x8a9aff, 0.15, 60, 8, -40] };
+const stage = createStage({ preset: 'nacht_spaet' });
+const { scene } = stage;
+async function main() {
+  await loadEnv();
+  const hud = await createHUD();
+  // Straße mit Partyhaus Nr. 7; das parkende Auto bei z = −55 rechts steht weiter hinten (Platz für Mia unter der Laterne und den Weg über die Straße)
+  const cars = [['n1', -2.4, -6.5, Math.PI, 0x2a4f7a], ['n2', -2.4, 12, Math.PI, 0xc9c9c9], ['suv', -2.4, -22, Math.PI, 0x7a1f22], ['n1', 2.4, -14.5, 0, 0x30343a], ['n2', 2.4, 19, 0, 0x4a5a3a], ['suv', 9.0, -6.9, -Math.PI / 2, 0x1d1f24],
+    ['n2', -2.4, -33, Math.PI, 0x8a8f96], ['n1', -2.4, -45, Math.PI, 0x1f3a5a], ['suv', -2.4, -63, Math.PI, 0x2b2b30], ['n1', -2.4, 26, Math.PI, 0x6a1f1f], ['suv', -2.4, 39, Math.PI, 0xd8d8d8], ['n2', -2.4, 54, Math.PI, 0x2f4a3a],
+    ['suv', 2.4, -28, 0, 0xc8c2b4], ['n2', 2.4, -40, 0, 0x7a2a2a], ['n1', 2.4, -63, 0, 0x5a6a7a], ['n1', 2.4, 31, 0, 0x1d1f24], ['n2', 2.4, 46, 0, 0x3a5a8a], ['suv', 2.4, 60, 0, 0x4a4a4e]];
+  const S = await buildStrasse(stage, { party: true, silhouettes: [], cars });
+  scene.traverse(o => { if (o.isMesh && o.geometry.type === 'PlaneGeometry' && Math.abs(o.position.x - 4.75) < 0.01 && Math.abs(o.position.z + 6.9) < 0.01) o.visible = false; }); // Einfahrt-Pflaster quer über den Gehweg
+  // Laterne weiter unten im Lindenweg: hier bleibt Mia stehen
+  const LZ = -56.8; const lamp = makeStreetLamp({ glow: 9 }); lamp.position.set(3.85, SW, LZ); scene.add(lamp); lamp.updateMatrixWorld(true);
+  const hp = lamp.userData.head.getWorldPosition(new THREE.Vector3()); const lampL = new THREE.SpotLight(0xffd6a0, 60, 22, 0.95, 0.75, 1.6);
+  lampL.position.copy(hp).add(V3(0, -0.08, 0)); lampL.target.position.copy(hp).add(V3(0.6, -5, 0)); scene.add(lampL, lampL.target);
+  if (seg === 'b') { lampL.castShadow = true; lampL.shadow.mapSize.set(2048, 2048); lampL.shadow.bias = -0.0002; lampL.shadow.normalBias = 0.02; }
+  await loadHumanAssets(); await loadBlockMoves();
+  const seg_ = (anim, at, o = {}) => ({ anim, at, fade: 0.3, ...o });
+  const onWalk = (x) => SW * smooth((Math.abs(x) - 3.55) / 0.15); // Gehweg (Bordstein) / Straße
+
+  // ---- Du
+  const DA = [5.05, 2.3], DB = [7.0, 2.6], GC = [8.66, 0.22];
+  const du = spawnBlock('du', { anim: 'Idle_Loop', x: DA[0], y: SW, z: DA[1] }); scene.add(du); povHide(du); du.visible = false; // Ego-Perspektive: eigener Körper nie im Bild (kein Ein-/Ausblenden, kein springender Schatten)
+  const phone = povPhoneRig(stage, du, { screen: null });
+  const vW = clipSpeed(du, 'Walk_Loop'), vJ = clipSpeed(du, 'Jog_Fwd_Loop'), vS = clipSpeed(du, 'Sprint_Loop');
+  const toGate = route([DA, [5.6, 2.62]], 7.1, 1.0);
+  const runA = route([DB, [6.3, 2.95], [5.35, 2.65], [5.05, 1.6], [5.1, 0.6]], RUN, 3.2);
+  const runB = route([[5.1, 0.6], [4.6, -3.0], [4.6, -40]], runA[runA.length - 1][0], 4.2);
+  const zAtCut = -3.0 - 4.2 * (CUT2 - runB[1][0]);
+  const runC = route([[4.6, -37.5], [4.6, -53.6], [4.6, -54.2]], CUT2, 3.8); const tArrive = runC[2][0];
+  const duPath = [[0, ...DA], ...toGate, [CUT1 - 0.001, 5.6, 2.62], [CUT1, ...DB], [RUN, ...DB], ...runA.slice(1), [CUT2 - 0.001, 4.6, zAtCut], ...runC];
+  const ryRun = angTo(DB, [6.3, 2.95]);
+  const duA = new Actor(du, { segs: [seg_('Idle_Loop', 0), seg_('Walk_Loop', 7.05, { speed: 1.0 / vW }), seg_('Idle_Loop', CUT1, { fade: 0.01 }), seg_('Jog_Fwd_Loop', RUN, { speed: 3.2 / vJ, fade: 0.25 }),
+      seg_('Sprint_Loop', runB[0][0], { speed: 4.2 / vS }), seg_('Sprint_Loop', CUT2, { speed: 3.8 / vS, fade: 0.01 }), seg_('Idle_Loop', tArrive - 0.25, { fade: 0.5 })],
+    path: duPath, ry: [[0, Math.PI], [5.2, Math.PI], [5.9, angTo(DA, [6.4, 3.0])], [CUT1 - 0.001, angTo(DA, [6.4, 3.0])], [CUT1, angTo(DB, GC)], [RUN - 0.05, angTo(DB, GC)], [RUN + 0.35, ryRun],
+      ...ryOf(runA).slice(1), [runB[0][0] + 0.2, Math.PI], [CUT2, Math.PI]],
+    after: (t, h) => { h.position.y = onWalk(h.position.x); } });
+
+  // ---- Mia: Hook vor dem Tor, danach (Zeitsprung) unter der Laterne
+  const MA = [4.7, -0.35], MB = [5.2, LZ + 0.6];
+  const mia = spawnBlock('mia', { x: MA[0], y: SW, z: MA[1] }); scene.add(mia); prepMoves(mia, ['Wave', 'Texting', 'Talk']);
+  const vM = clipSpeed(mia, 'Walk_Loop');
+  const miaA = new Actor(mia, { segs: [seg_('Ara:Wave', 0, { offset: 0.6 }), seg_('Idle_Loop', 1.5, { fade: 0.35 }), seg_('Walk_Loop', 1.85, { speed: 1.3 / vM, fade: 0.35 }), seg_('Ara:Texting', CUT1, { fade: 0.01 }),
+      seg_('Idle_Loop', 34.2, { fade: 0.5 }), seg_('Ara:Talk', VOICE.danke, { fade: 0.45 }), seg_('Idle_Loop', 37.9, { fade: 0.6 })],
+    path: [[0, ...MA], [1.95, ...MA], [CUT1 - 0.001, MA[0], MA[1] - 1.3 * (CUT1 - 0.001 - 1.95)], [CUT1, ...MB]], ry: [[0, 0], [1.45, 0], [1.95, Math.PI], [CUT1 - 0.001, Math.PI], [CUT1, 0]] });
+
+  // ---- der Typ mit Kapuze: steht hinter Mia im Dunkeln (zwischen Du und Mia), geht über die Straße weg, als Du kommt
+  const CA = [4.05, -50.4]; const cWalk = route([CA, [3.0, -51.0], [-3.2, -53.6], [-4.75, -55.6], [-4.75, -80]], 31.75, 1.8);
+  const creep = extra('creep', { x: CA[0], y: SW, z: CA[1] }); scene.add(creep);
+  const vC = clipSpeed(creep, 'Walk_Loop');
+  const cA = new Actor(creep, { segs: [seg_('Idle_Loop', 0, { offset: 0.7 }), seg_('Walk_Loop', 31.7, { speed: 1.8 / vC, fade: 0.4 })], path: [[0, ...CA], ...cWalk],
+    ry: [[0, Math.PI], [31.45, Math.PI], [31.9, -2.1], ...ryOf(cWalk, 0.05).slice(1)], after: (t, h) => { h.position.y = onWalk(h.position.x); } });
+
+  // ---- Leon (Gastgeber, Becher): A am Tor, B im Vorgarten
+  const LA = [6.4, 3.0], LB = [7.8, 0.23];
+  const leon = spawnBlock('leon', { x: LA[0], y: SW, z: LA[1] }); scene.add(leon); prepMoves(leon, ['Talk with gestures', 'Laugh', 'Talk']);
+  const lA = new Actor(leon, { segs: [seg_('Idle_Loop', 0, { offset: 0.4 }), seg_('Ara:Talk with gestures', 5.0, { fade: 0.3 }), seg_('Idle_Loop', 7.1, { fade: 0.4 }), seg_('Ara:Laugh', CUT1, { fade: 0.01, offset: 0.3 }),
+      seg_('Idle_Talking_Loop', 9.4, { fade: 0.5 }), seg_('Ara:Talk', 12.5, { fade: 0.3 }), seg_('Idle_Loop', 14.4, { fade: 0.5 }), seg_('Ara:Laugh', 18.6, { fade: 0.4 }), seg_('Idle_Talking_Loop', 21.0, { fade: 0.5 })],
+    path: [[0, ...LA], [CUT1 - 0.001, ...LA], [CUT1, ...LB]], ry: [[0, angTo(LA, DA)], [CUT1 - 0.001, angTo(LA, DA)], [CUT1, angTo(LB, DB) + 0.25]] });
+  // ---- Partygäste im Vorgarten (in beiden Einstellungen an derselben Stelle)
+  const ben = spawnBlock('ben', { x: 9.01, y: SW, z: 0.95 }), jas = spawnBlock('jasmin', { x: 8.97, y: SW, z: 0.32 }), teal = extra('tealGirl', { x: 8.76, y: SW, z: -0.44 });
+  const yard = [ben, jas, teal]; yard.forEach(h => { scene.add(h); faceTo(h, V3(GC[0], 0, GC[1]).lerp(V3(DB[0], 0, DB[1]), 0.4)); }); prepMoves(ben, ['Laugh']); prepMoves(jas, ['Laugh', 'Talk with gestures']); prepMoves(teal, ['Laugh']);
+  holdCup(leon, 'r'); holdCup(ben, 'l', 0x2a62c8);
+  const bA = new Actor(ben, { segs: [seg_('Idle_Talking_Loop', 0, { offset: 1.0 }), seg_('Ara:Laugh', 8.0, { offset: 0.5 }), seg_('Idle_Loop', 9.8, { fade: 0.5 }), seg_('Ara:Laugh', 18.7, { offset: 0.2 }), seg_('Idle_Talking_Loop', 21.2, { fade: 0.5 })] });
+  const jA = new Actor(jas, { segs: [seg_('Ara:Talk with gestures', 0, { offset: 0.8 }), seg_('Ara:Laugh', 7.95, { offset: 0.1 }), seg_('Idle_Loop', 9.6, { fade: 0.5 }), seg_('Ara:Talk with gestures', 18.5, { fade: 0.5 }), seg_('Ara:Laugh', 22.0, { fade: 0.4 }), seg_('Idle_Loop', 24.0, { fade: 0.5 })] });
+  const tA = new Actor(teal, { segs: [seg_('Ara:Laugh', 0, { offset: 0.5 }), seg_('Idle_Loop', 3.0, { fade: 0.5 }), seg_('Ara:Laugh', 8.05, { offset: 0.9 }), seg_('Idle_Loop', 9.9, { fade: 0.5 }), seg_('Ara:Laugh', 18.8), seg_('Idle_Loop', 21.4, { fade: 0.5 })] });
+  const actors = [duA, miaA, cA, lA, bA, jA, tA];
+
+  stage.build({ focus: V3(4.8, 1.5, -1), aperture: 0.0008 });
+  if (seg === 'b') stage.limitLights(V3(4.6, 1.5, -52), 7); else { stage.limitLights(V3(6.2, 1.5, 1.2), 9); lampL.visible = true; } // die ferne Laterne bleibt an (Mia ist dort von weitem zu sehen)
+
+  // ---- Handy-Bildschirme
+  const m1 = { me: false, text: 'da läuft einer', time: '23:43' }, m2 = { me: false, text: 'hinter mir', time: '23:43' }, m3 = { me: false, text: 'er kommt näher', time: '23:44' };
+  const SCR = { c1: chatTex({ name: 'Mia', clock: '23:43', msgs: [m1, m2] }), c2: chatTex({ name: 'Mia', clock: '23:44', msgs: [m1, m2, m3] }), c3: chatTex({ name: 'Mia', clock: '23:44', msgs: [m1, m2, m3], typing: true }),
+    call: callTex('Anruf …'), mail: callTex('Mailbox', { sub: 'nicht erreichbar' }), call2: callTex('Anruf …'), live: callTex('00:01') };
+  const screenAt = (t) => t < 17.1 ? SCR.c1 : t < 17.6 ? SCR.c2 : t < 18.5 ? SCR.c3 : t < 18.9 ? SCR.c2 : t < 21.6 ? SCR.call : t < 27 ? SCR.mail : t < 30.25 ? SCR.call2 : SCR.live;
+  let curScr = null;
+  const kPhAt = (t) => smooth((t - 8.6) / 0.45) * (1 - smooth((t - 24.6) / 0.5)) + smooth((t - 29.0) / 0.4) * (1 - smooth((t - 30.55) / 0.45));
+  const zoomAt = (t) => t < 24.7 ? smooth((t - 9.1) / 0.5) * (1 - 0.9 * smooth((t - 12.45) / 0.4) * (1 - smooth((t - 16.85) / 0.4))) * (1 - 0.45 * smooth((t - 18.9) / 0.4)) : 0.75;
+
+  // ---- Blickziele der Ego-Kamera
+  const F = (h, up = 0.14) => headOf(h, up), yardC = () => F(leon)().lerp(F(jas)(), 0.55), gateP = () => V3(6.1, SW + 1.45, 3.0), street = () => V3(4.6, SW + 1.3, -30);
+  const ground = () => V3(du.position.x + Math.sin(du.rotation.y) * 1.25, 0, du.position.z + Math.cos(du.rotation.y) * 1.25); // Boden kurz vor Du (verdeckter Schnitt)
+  const look = [{ t: 0, p: F(mia) }, { t: 1.9, d: 1.2, p: () => F(mia)().add(V3(0, -0.1, 0)) }, { t: 5.15, d: 0.65, p: F(leon) }, { t: 7.05, d: 0.6, p: () => V3(12.5, SW + 1.6, 0.4) },
+    { t: CUT1, d: 0.01, p: yardC }, { t: 8.55, d: 0.5, pitch: -0.22 }, { t: 12.4, d: 0.45, p: F(leon) }, { t: 16.75, d: 0.45, pitch: -0.22 }, { t: 24.6, d: 0.6, pitch: -0.42 },
+    { t: 26.95, d: 0.6, p: street }, { t: 28.95, d: 0.45, p: ground },
+    { t: CUT2, d: 0.01, p: ground }, { t: 30.55, d: 0.6, p: () => F(mia)().lerp(F(creep)(), 0.5) }, { t: 31.35, d: 0.5, p: F(creep) }, { t: 32.3, d: 0.6, p: F(mia) }];
+  const P = stage.P;
+  window.renderFrame = (t) => {
+    for (const a of actors) a.update(t); syncPhone(mia); S.swayAt(t);
+    mia.visible = true; creep.visible = t > CUT1;
+    const duH = headOf(du, 0.12)();
+    // Köpfe
+    if (t < 1.95) lookAt(mia, duH, 0.8);
+    if (t > CUT2 && t < 34.2) lookAt(mia, F(creep)().lerp(duH, smooth((t - 32.0) / 0.8)), 0.7); else if (t >= 34.2) lookAt(mia, duH, 0.85);
+    if (t < CUT1) lookAt(leon, duH, 0.85); else lookAt(leon, t > RUN ? headOf(du, 0)() : duH, t > 9.4 && t < 18.5 || t > RUN ? 0.8 : 0.35);
+    yard.forEach((h, i) => lookAt(h, t > 9.5 && t < 12.6 && i < 2 ? duH : F(leon)(), 0.5));
+    // Gesichter
+    mia.userData.blockFace.set(t < CUT1 ? 'happy' : t < 34.3 ? 'scared' : 'relieved', { blink: blinkAt(t, 7), talk: Math.max(lip(t, 'geh'), lip(t, 'hallo'), lip(t, 'danke')) });
+    creep.userData.blockFace.set(t > 31.8 ? 'sideeye' : 'neutral', { blink: blinkAt(t, 13) });
+    const leonExpr = t < CUT1 ? 'happy' : t > RUN ? 'surprised' : t > 12.5 && t < 14.6 ? 'smirk' : t > 9.6 && t < 12.5 ? 'neutral' : 'laugh';
+    leon.userData.blockFace.set(t > 9.4 && t < 18.6 && leonExpr === 'laugh' ? 'happy' : leonExpr, { blink: blinkAt(t, 9), talk: Math.max(lip(t, 'runde'), lip(t, 'chill'), lip(t, 'wohin')) });
+    const party = (t > 8.0 && t < 9.7) || (t > 18.7 && t < 21.3) || t < 3.0;
+    ben.userData.blockFace.set(t > RUN ? 'surprised' : party ? 'laugh' : 'happy', { blink: blinkAt(t, 4), talk: party ? Math.max(0, Math.sin(t * 9)) * 0.7 : 0 });
+    jas.userData.blockFace.set(t > RUN ? 'surprised' : party ? 'laugh' : 'smirk', { blink: blinkAt(t, 5), talk: party ? Math.max(0, Math.sin(t * 8)) * 0.7 : 0 });
+    teal.userData.blockFace.set(party ? 'laugh' : 'happy', { blink: blinkAt(t, 6), talk: party ? Math.max(0, Math.sin(t * 10)) * 0.7 : 0 });
+    // Ego-Kamera
+    const running = t > RUN && t < tArrive, walking = t > 7.05 && t < CUT1;
+    const st = povPose(du, { steady: true, pitch: -0.05, bob: walking ? 0.012 : 0, t });
+    if (running) { const f = t < runB[0][0] ? 2.3 : 2.7, a = t < runB[0][0] ? 0.022 : 0.032; st.eye.y += a * Math.abs(Math.sin(t * Math.PI * f)) - a * 0.5; }
+    const kPh = kPhAt(t), scr = screenAt(t); if (scr !== curScr) { phone.setScreen(scr); curScr = scr; } phone.set(kPh, zoomAt(t));
+    const dir = lookDir(t, st, look); dir.y -= 0.08 * kPh; dir.normalize();
+    if (running) { const sw = Math.sin(t * Math.PI * 2.7) * 0.012; dir.x += sw * Math.cos(du.rotation.y); dir.z -= sw * Math.sin(du.rotation.y); dir.normalize(); } // leichtes Pendeln beim Rennen
+    const cam = stage.camera; cam.position.copy(st.eye); cam.lookAt(st.eye.clone().add(dir)); cam.fov = t > CUT1 && t < RUN ? 64 : 60; cam.near = 0.03; cam.updateProjectionMatrix();
+    if (stage.passes.bokeh) { const kb = smooth((t - 29.15) / 0.3) * (1 - smooth((t - 30.35) / 0.3)); stage.passes.bokeh.uniforms.aperture.value = 0.0008 + 0.006 * kb; stage.passes.bokeh.uniforms.maxblur.value = 0.0045 + 0.012 * kb; } // verdeckter Schnitt: Hintergrund hinter dem Handy stark unscharf
+    const tg = [...look].reverse().find(s => s.t <= t); stage.setFocus(kPh > 0.5 ? st.eye.clone().addScaledVector(dir, 0.3) : tg && tg.p ? tg.p() : st.eye.clone().addScaledVector(dir, 3));
+    // HUD
+    hud.loc(t < CUT1 ? 'LINDENWEG 7 · 23:41' : t < RUN ? 'LINDENWEG 7 · 23:43' : 'LINDENWEG · 23:44');
+    const c = counterAt(t, COUNTER); hud.counter(c.v, c.fl, c.up); hud.hud(1);
+    stage.grade.uniforms.sat.value = 0.35 + (P.sat - 0.35) * Math.max(0, (c.v - 5) / 95);
+    hud.hook(HOOK, smooth((t + 0.3) / 0.35) * (1 - smooth((t - 3.5) / 0.4))); // schon im ersten Bild sichtbar (Vorschaubild)
+    let so = 0, txt = ''; for (const [a, b, s] of SUBS) { const k = Math.min(smooth((t - a) / 0.2), 1 - smooth((t - b + 0.2) / 0.2)); if (k > so) { so = k; txt = s; } }
+    hud.subTop(kPh > 0.3 ? 560 : 1238); hud.sub(txt, so);
+    hud.endCard(t - END, { nr: 3, rule: 'Lass niemanden allein nach Hause gehen.', question: 'Hättest du sie begleitet?', hook: HOOK });
+    stage.render();
+  };
+  window.renderStill = () => { window.renderFrame(parseFloat(Q.get('t') || '1')); return true; };
+  window.clipLength = LEN; window.ready = true;
+}
+main().catch(e => console.error('BUILD ERROR', e.message, e.stack));
+</script>
+</body>
+</html>

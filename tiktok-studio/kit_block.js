@@ -39,6 +39,8 @@ const FACES = {
   smirk:    { brow: [0.02, -0.12], eye: 0.85, mouth: 'smirk' },
   sideeye:  { brow: [-0.04, -0.15], eye: 0.8, mouth: 'flat_side', look: [0.35, 0] },
   shocked:  { brow: [0.25, 0.1], eye: 1.3, mouth: 'big_o' },
+  scared:   { brow: [0.18, 0.35], eye: 1.15, mouth: 'wobble' },           // Angst (Folge 3)
+  relieved: { brow: [0.0, 0.32], eye: 0.85, mouth: 'smile' },             // erleichtert: besorgte Brauen, kleines Lächeln (Folge 3)
   cool:     { brow: [-0.03, -0.22], eye: 1, lid: 0.42, mouth: 'smirk' }, // lässig/souverän: halb geschlossene Lider, Grinsen (Profilbild „Aura“)
 };
 export function drawFace(spec, name, { blink = 0, talk = 0, look = null, blush = 0 } = {}) {
@@ -123,6 +125,11 @@ export function spawnBlock(name, o = {}) {
   if (spec.hairStyle === 'buzz') { hb(HS * 1.03, HS * 0.1, HS * 0.98, 0, top + HS * 0.0, 0); hb(HS * 1.04, HS * 0.32, HS * 0.08, 0, top - HS * 0.18, -HS * 0.47); }
   if (spec.hairStyle === 'long') { hb(HS * 1.08, HS * 0.2, HS * 1.04, 0, top - HS * 0.02, 0); hb(HS * 1.12, HS * 1.25, HS * 0.16, 0, top - HS * 0.62, -HS * 0.5); hb(HS * 0.12, HS * 1.0, HS * 0.7, -HS * 0.55, top - HS * 0.5, -HS * 0.12, mHair2); hb(HS * 0.12, HS * 1.0, HS * 0.7, HS * 0.55, top - HS * 0.5, -HS * 0.12, mHair2); hb(HS * 0.62, HS * 0.13, HS * 0.2, -HS * 0.18, top - HS * 0.1, HS * 0.42, mHair2); }
   if (spec.hairStyle === 'bun') { hb(HS * 1.06, HS * 0.16, HS * 1.02, 0, top - HS * 0.02, 0); hb(HS * 0.42, HS * 0.36, HS * 0.42, 0, top + HS * 0.16, -HS * 0.18, mHair2); hb(HS * 1.06, HS * 0.42, HS * 0.1, 0, top - HS * 0.24, -HS * 0.47); }
+  // Kapuze auf dem Kopf (spec.hood: true, Farbe vom Oberteil) – Gesicht bleibt frei, Rand liegt knapp vor der Stirn
+  if (spec.hood) { const mH = toy(spec.shirt), mH2 = toy(shade(spec.shirt, 0.8)), W = HS * 1.2, fr = HS * 0.5;
+    hb(W, HS * 0.16, HS * 1.12, 0, top + HS * 0.06, -HS * 0.03, mH); hb(W, HS * 1.08, HS * 0.14, 0, hc.y - HS * 0.02, -HS * 0.55, mH);
+    for (const sx of [-1, 1]) hb(HS * 0.13, HS * 1.06, HS * 1.02, sx * HS * 0.6, hc.y - HS * 0.03, -HS * 0.02, mH);
+    hb(W * 0.96, HS * 0.11, HS * 0.12, 0, top - HS * 0.02, fr - HS * 0.02, mH2); }
   if (spec.beard) hb(HS * 1.0, HS * 0.26, HS * 0.1, 0, hc.y - HS * 0.38, HS * 0.46, mHair2);
   // Rumpf (Oberteil) am oberen Rücken, Hüfte an der Hüfte
   const sp1 = P('spine_01'), nk = P('neck_01'), pel = P('pelvis');

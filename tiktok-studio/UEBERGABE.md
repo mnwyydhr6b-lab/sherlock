@@ -223,6 +223,9 @@
 - **Figuren mit Hals, Stimmen mit Gefühl (Nutzer 24.11.):** Die Klötzchen-Figuren haben jetzt einen sichtbaren Hals. Stimmen immer emotional erzeugen: eleven_v3 mit Audio-Tags (z. B. `[hurt]`, `[annoyed, dismissive]`) und `voice_settings.stability = 0.0`.
 - **Hook muss die Situation sofort erklären (Nutzer 24.11.):** Du spricht im Hook aus, worum es geht (Folge 1: „Eine Party? Ohne mich? Vielleicht haben sie’s vergessen.“). Solange das Handy unten im Bild ist, Untertitel höher setzen (`hud.subTop(600)`).
 - **Nicht auf Antworten warten (Nutzer 23.11.):** Testbilder dürfen geschickt werden, aber Claude wartet nicht auf Feedback, sondern prüft selbst und arbeitet direkt weiter bis zum fertigen Video. Nur bei echten Entscheidungen fragen.
+- **Länge (Nutzer 25.11.):** Folgen müssen nicht genau 50 s sein. Lieber 5–10 s kürzer als unnötig in die Länge ziehen.
+- **Qualität vor Tempo (Nutzer 25.11.):** Sich Zeit lassen, fertiges Video selbst auf **Flackern und Logikfehler** prüfen (Frame-Differenzen, Kontaktbogen, Ablauf/Orte/Zeiten). Feedback gibt der Nutzer erst am fertigen Video.
+- **Posten hat am 25.11. begonnen** (früher als geplant). Den Kanalnamen ändert der Nutzer am Samstag (28.11.).
 - **Fehler im Bild stören ihn sehr** (fehlende Hand, Handy durch die Hand, Loch am Hals). Vor jedem Zeigen Testbilder selbst genau prüfen, besonders Hände, Hals, Handy und Kopf.
 - Will auffallen, aber **ohne Spielereien**: Klötzchen-Figuren in der detaillierten Welt, Ego-Perspektive, normales Format. Vorgeschlagene Effekte (Risse, abfallende Blöcke, Glas-Sprünge) hat er abgelehnt.
 
@@ -253,7 +256,7 @@
 |---|---|---|---|
 | ✅ Di 24.11. | ⭐ 1 – Nicht eingeladen → nicht hingehen | Straße, Vorgarten, Party-Wohnzimmer | fertig: `folge01.mp4`, neues Set `set_wohnzimmer.js` (Verschiebung: wegen Wochenlimit einen Tag später gedreht) |
 | ✅ Mi 25.11. | ⭐ 10 – Lach nicht mit, wenn über dich gelacht wird (vorgezogen, gepostet als **Regel Nr. 2**) | Schulhof (Tag) | `folge10.mp4`, Skript `skripte/folge10_lachen.md` |
-| Do 26.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen | Straße nachts (`party: false`), Fußweg | ggf. dunkler Fußweg/Park |
+| ⏳ Mi 25.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen (**Regel Nr. 3**, Hook A) | Lindenweg nachts (Partyhaus, Vorgarten, Straße weiter südlich mit Laterne) | Skript `skripte/folge03_heimweg.md` |
 | Fr 27.11. | ⭐ 4 – Wer mit dir lästert, lästert auch über dich | Schulhof (Tag) | ggf. Ecke/Flur zum Belauschen |
 | Sa 28.11. | ⭐ 9 – Steh nicht daneben | Bushaltestelle, Bus | **Bus innen** |
 | (Puffer) | Nacharbeiten, falls nötig | – | – |

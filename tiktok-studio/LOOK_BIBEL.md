@@ -163,3 +163,16 @@ Der Look gilt als getroffen, wenn ein neues Bild neben diesen Referenzen wie aus
 - Im Hochformat wirken Gesprächspartner schnell zu nah: Abstand in der Ego-Perspektive mindestens 1,5–2 m, Bildwinkel 60–64.
 - Testbilder an vielen Zeitpunkten auf einmal: `node shots.js "seite.html?…" präfix t1,t2,… 0.5` und `python3 sheet.py bogen.png präfix_*.png`.
 - Ein Standbild in doppelter Auflösung dauert 30–60 s. Tests deshalb mit Faktor 0,5 und `dof=0`.
+- **Telefonieren (Folge 3):** `Phone call` sieht mit dem großen Klötzchen-Kopf falsch aus (Hand landet am Hals, Handy verschwindet). Stattdessen `Texting` nutzen: Die Figur hält das Handy sichtbar vor sich (Freisprechen).
+- **Kopf zu einer Figur hinter sich drehen** (`lookAt` > 90°) bricht den Hals optisch ab. Erst den Körper drehen (`ry`), dann höchstens leicht nachschauen – oder ganz weglassen.
+- **Gruppen im Hochformat:** Figuren auf einem Bogen quer zur Blickrichtung aufstellen (Versatz ±0,7 m bei 2,4–3,5 m Abstand), sonst stehen sie hintereinander und verdecken sich (Beispiel: Vorgarten in `folge03.html`).
+- **Erzeugte Geräusche (ElevenLabs) immer per Abschrift prüfen:** Ein „Piepton“ enthielt Stimmgeräusche („können wir“), ein „Klick“ klang wie „Ja“. Kurze technische Töne (Piep, Klick) lieber mit ffmpeg erzeugen (`sine`, `anoisesrc`).
+
+## 7. Neue Bausteine (Folge 3, 25.11.)
+
+- **Späte Nacht ohne Abendrot:** In der Szene `PRESETS.nacht_spaet = { base: 'nacht', sky: …, fog: [0x141830, 0.016], … }` vor `createStage` anlegen (siehe `folge03.html`). Dunkler, mehr Dunst, Laternen tragen das Licht – passt zu bedrohlichen Szenen.
+- **Kapuze:** `spec.hood: true` (Farbe vom Oberteil) – Kapuze auf dem Kopf, Gesicht bleibt frei.
+- **Gesichter:** `scared` (Angst) und `relieved` (erleichtert: besorgte Brauen, kleines Lächeln).
+- **Verdeckter Schnitt (Ortssprung ohne sichtbaren Schnitt):** Du schaut im Laufen aufs Handy, die Kamera zielt auf den Boden ca. 1,25 m vor Du (`p: ground`, nicht `pitch` – `pitch` kippt höchstens ca. 39°), Blende kurz stark auf (`stage.passes.bokeh.uniforms.aperture/maxblur`). Auf beiden Seiten des Sprungs muss der Boden gleich aussehen (Bäume, Einfahrten, Mülltonnen meiden). Der Schnitt liegt genau auf einem Frame und ist gleichzeitig die Grenze der beiden Render-Abschnitte.
+- **Anruf-Bildschirm:** `callTex(status, { sub })` in `folge03.html` (Avatar, Name, „Anruf …“, „Mailbox“, „00:01“, Tasten).
+- **Laterne nachrüsten:** `makeStreetLamp({ glow: 9 })` + `SpotLight(0xffd6a0, 60, 22, 0.95, 0.75, 1.6)` wie im Straßen-Set; nach `limitLights` bei Bedarf wieder `visible = true` setzen, damit sie auch von weitem leuchtet.
