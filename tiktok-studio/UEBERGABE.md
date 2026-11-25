@@ -256,7 +256,7 @@
 |---|---|---|---|
 | ✅ Di 24.11. | ⭐ 1 – Nicht eingeladen → nicht hingehen | Straße, Vorgarten, Party-Wohnzimmer | fertig: `folge01.mp4`, neues Set `set_wohnzimmer.js` (Verschiebung: wegen Wochenlimit einen Tag später gedreht) |
 | ✅ Mi 25.11. | ⭐ 10 – Lach nicht mit, wenn über dich gelacht wird (vorgezogen, gepostet als **Regel Nr. 2**) | Schulhof (Tag) | `folge10.mp4`, Skript `skripte/folge10_lachen.md` |
-| ⏳ Mi 25.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen (**Regel Nr. 3**, Hook A) | Lindenweg nachts (Partyhaus, Vorgarten, Straße weiter südlich mit Laterne) | Skript `skripte/folge03_heimweg.md` |
+| ✅ Mi 25.11. | ⭐ 3 – Lass niemanden allein nach Hause gehen (**Regel Nr. 3**, Hook A) | Lindenweg nachts (Partyhaus, Vorgarten, Straße weiter südlich mit Laterne) | `folge03.mp4` (46,5 s), Skript `skripte/folge03_heimweg.md`, Bau `./make_folge03.sh` |
 | Fr 27.11. | ⭐ 4 – Wer mit dir lästert, lästert auch über dich | Schulhof (Tag) | ggf. Ecke/Flur zum Belauschen |
 | Sa 28.11. | ⭐ 9 – Steh nicht daneben | Bushaltestelle, Bus | **Bus innen** |
 | (Puffer) | Nacharbeiten, falls nötig | – | – |
